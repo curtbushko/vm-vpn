@@ -16,6 +16,9 @@ Usage:
   vm list
   vm up|down|restart|status PRODUCT ENVIRONMENT
   vm rebuild PRODUCT ENVIRONMENT
+  vm diagnose PRODUCT ENVIRONMENT
+  vm cleanup PRODUCT ENVIRONMENT
+  vm check
   vm doctor
 
 Phase 1 exposes identity and host prerequisite checks. Lifecycle commands are
@@ -163,7 +166,7 @@ vm_start() {
 	snapshot="$(prepare_source_snapshot "$1" "$2")"
 	umask 077
 	mkdir -p "$state_root"
-	(tart_command run "$name" --no-clipboard --dir "repo:$snapshot:ro" >>"$state_root/tart.log" 2>&1 &)
+	(tart_command run "$name" --no-audio --no-clipboard --dir "repo:$snapshot:ro" >>"$state_root/tart.log" 2>&1 &)
 	printf 'started %s\n' "$name"
 }
 
@@ -193,6 +196,41 @@ materialize() {
 	tar -C "$root" -cf - . | tart_command exec -i "$name" /run/current-system/sw/bin/bash -c \
 		'umask 077; install -d -m 0700 /run/vpn-workspace/config/openaws-vpn-client; tar -C /run/vpn-workspace -xf -; printf "%s\n" /run/vpn-workspace/vpn/profile.ovpn > /run/vpn-workspace/config/openaws-vpn-client/last_ovpn; if [[ -f /run/vpn-workspace/bookmarks/bookmarks.json ]]; then { printf "%s\n" "<!doctype html><meta charset=utf-8><title>Workspace links</title><ul>"; jq -r '\''.[] | "<li><a href=\"" + (.url | @html) + "\">" + (.title | @html) + "</a></li>"'\'' /run/vpn-workspace/bookmarks/bookmarks.json; printf "%s\n" "</ul>"; } > /run/vpn-workspace/start.html; fi; for profile in /home/vpn/.mozilla/firefox/*.default*; do [[ -d "$profile" ]] || continue; for cert in /run/vpn-workspace/certs/*.crt; do [[ -f "$cert" ]] || continue; certutil -A -d "sql:$profile" -n "vm-vpn-runtime-$(basename "$cert")" -t "C,," -i "$cert"; done; for cert in /run/vpn-workspace/certs/*.p12; do [[ -f "$cert" ]] || continue; password="${cert%.p12}.password"; [[ -f "$password" ]] || continue; pk12util -d "sql:$profile" -i "$cert" -w "$password"; done; done; chmod -R go-rwx /run/vpn-workspace'
 	printf 'runtime material ready for %s\n' "$name"
+}
+
+diagnose() {
+	validate_workspace "$1" "$2"
+	local root profile present="no" mode="missing" guest="no" tart_version="unavailable"
+	root="$(workspace_dir "$1" "$2")"
+	profile="$root/vpn/profile.ovpn"
+	if [[ -f "$profile" ]]; then
+		present="yes"
+		mode="$(stat -c '%a' "$profile")"
+	fi
+	if tart_version="$(tart_command --version 2>/dev/null)"; then :; else tart_version="unavailable"; fi
+	if tart_command exec "$1-$2" /run/current-system/sw/bin/true >/dev/null 2>&1; then guest="yes"; fi
+	printf 'WORKSPACE=%s/%s\nNIX_VERSION=%s\nTART_VERSION=%s\nGUEST_REACHABLE=%s\nPROFILE_PRESENT=%s\nPROFILE_MODE=%s\n' \
+		"$1" "$2" "$(nix --version)" "${tart_version:-unknown}" "$guest" "$present" "$mode"
+	vm_status "$1" "$2"
+}
+
+cleanup() {
+	validate_workspace "$1" "$2"
+	local root trash item moved=0
+	root="$(state_dir "$1" "$2")"
+	trash="$root/.trash/$(date -u +%Y%m%dT%H%M%SZ)"
+	for item in sources tart.log installer.log; do
+		if [[ -e "$root/$item" ]]; then
+			mkdir -p "$trash"
+			mv "$root/$item" "$trash/"
+			moved=1
+		fi
+	done
+	printf 'moved_recoverable_state=%s\n' "$moved"
+}
+
+check_repository() {
+	"${VM_VPN_REPO_ROOT:-$PWD}/scripts/ci-check"
 }
 
 wait_for_materialization() {
@@ -325,6 +363,21 @@ main() {
 		shift
 		[[ "$#" -eq 2 ]] || fail "rebuild requires PRODUCT and ENVIRONMENT"
 		vm_rebuild "$@"
+		;;
+	diagnose)
+		shift
+		[[ "$#" -eq 2 ]] || fail "diagnose requires PRODUCT and ENVIRONMENT"
+		diagnose "$@"
+		;;
+	cleanup)
+		shift
+		[[ "$#" -eq 2 ]] || fail "cleanup requires PRODUCT and ENVIRONMENT"
+		cleanup "$@"
+		;;
+	check)
+		shift
+		[[ "$#" -eq 0 ]] || fail "check does not accept arguments"
+		check_repository
 		;;
 	doctor)
 		shift

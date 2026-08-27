@@ -54,8 +54,11 @@
           darwinPkgs.coreutils
           darwinPkgs.gawk
           darwinPkgs.gnutar
+          darwinPkgs.git
           darwinPkgs.jq
           darwinPkgs.nix
+          darwinPkgs.nixfmt
+          darwinPkgs.ripgrep
           darwinPkgs.shellcheck
           darwinPkgs.shfmt
           tart
@@ -158,6 +161,7 @@
           darwinPkgs.nixfmt
           darwinPkgs.nix
           darwinPkgs.openssh
+          darwinPkgs.ripgrep
           darwinPkgs.shellcheck
           darwinPkgs.shfmt
           tart

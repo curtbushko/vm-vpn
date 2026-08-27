@@ -49,4 +49,7 @@ assert builtins.hasAttr "vm-vpn/wallpaper.svg" system.environment.etc;
 assert
   builtins.match ".*${resolved.statusText}.*"
     system.environment.etc."xdg/quickshell/${resolved.vmName}/shell.qml".text != null;
+assert
+  builtins.match ".*VPN ready.*"
+    system.environment.etc."xdg/quickshell/${resolved.vmName}/shell.qml".text != null;
 true

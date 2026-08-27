@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+bats tests/*.bats
+shellcheck scripts/*
+shfmt -d scripts/*
+mapfile -t nix_files < <(rg --files -g '*.nix')
+nixfmt --check "${nix_files[@]}"
+nix flake check --all-systems
+git diff --check
+
+if git grep -n -E 'BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY|AKIA[0-9A-Z]{16}'; then
+	printf 'ci-check: possible tracked secret material found\n' >&2
+	exit 1
+fi

@@ -84,8 +84,26 @@
     import QtQuick
     import QtQuick.Layouts
     import Quickshell
+    import Quickshell.Io
 
     PanelWindow {
+      id: root
+      property bool vpnReady: false
+
+      Process {
+        id: vpnCheck
+        command: ["${pkgs.coreutils}/bin/test", "-f", "/run/vpn-workspace/vpn/profile.ovpn"]
+        onExited: (exitCode, exitStatus) => root.vpnReady = exitCode === 0
+      }
+
+      Timer {
+        interval: 5000
+        repeat: true
+        running: true
+        triggeredOnStart: true
+        onTriggered: if (!vpnCheck.running) vpnCheck.running = true
+      }
+
       anchors {
         top: true
         left: true
@@ -109,6 +127,13 @@
         }
 
         Item { Layout.fillWidth: true }
+
+        Text {
+          text: root.vpnReady ? "󰌆 VPN ready" : "󰦞 VPN stopped"
+          color: root.vpnReady ? "#${workspace.colors.accentText}" : "#${workspace.colors.foreground}"
+          font.family: "JetBrainsMono Nerd Font"
+          font.pixelSize: 14
+        }
 
         Text {
           text: "${workspace.vmName}"

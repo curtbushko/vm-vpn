@@ -179,3 +179,33 @@ EOF
 	grep -q '^run vault-dev ' "${TART_LOG}"
 	grep -q '^run consul-lab ' "${TART_LOG}"
 }
+
+@test "diagnose reports presence and modes without reading sensitive contents" {
+	canary="diagnostic-${RANDOM}-secret"
+	printf '%s\n' "${canary}" >"${BATS_TEST_TMPDIR}/profile.ovpn"
+	run "${VM_COMMAND}" init vault dev
+	run "${VM_COMMAND}" import-vpn vault dev "${BATS_TEST_TMPDIR}/profile.ovpn"
+	run "${VM_COMMAND}" diagnose vault dev
+	[ "${status}" -eq 0 ]
+	[[ "${output}" == *"PROFILE_PRESENT=yes"* ]]
+	[[ "${output}" == *"PROFILE_MODE=600"* ]]
+	[[ "${output}" != *"${canary}"* ]]
+}
+
+@test "cleanup moves recoverable operational state to trash without touching data or VM" {
+	mkdir -p "${VM_VPN_STATE_HOME}/vault/dev/sources/example"
+	printf 'log\n' >"${VM_VPN_STATE_HOME}/vault/dev/tart.log"
+	run "${VM_COMMAND}" cleanup vault dev
+	[ "${status}" -eq 0 ]
+	[ -d "${VM_VPN_STATE_HOME}/vault/dev/.trash" ]
+	[ ! -e "${VM_VPN_STATE_HOME}/vault/dev/sources" ]
+	! grep -q 'delete' "${TART_LOG}"
+}
+
+@test "diagnose degrades safely when Tart is unavailable" {
+	export TART_BIN="${BATS_TEST_TMPDIR}/missing-tart"
+	run "${VM_COMMAND}" diagnose vault dev
+	[ "${status}" -eq 0 ]
+	[[ "${output}" == *"TART_VERSION=unavailable"* ]]
+	[[ "${output}" == *"GUEST_REACHABLE=no"* ]]
+}
