@@ -73,7 +73,7 @@
     }
 
     bind = SUPER, RETURN, exec, ${pkgs.ghostty}/bin/ghostty
-    bind = SUPER, B, exec, ${pkgs.firefox}/bin/firefox
+    bind = SUPER, B, exec, ${pkgs.bash}/bin/bash -c 'if [[ -f /run/vpn-workspace/start.html ]]; then exec ${pkgs.firefox}/bin/firefox file:///run/vpn-workspace/start.html; else exec ${pkgs.firefox}/bin/firefox; fi'
     bind = SUPER, Q, killactive
     bind = SUPER, L, exec, ${pkgs.swaylock}/bin/swaylock --color ${workspace.colors.background}
     bind = SUPER SHIFT, E, exit

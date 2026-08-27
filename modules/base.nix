@@ -44,6 +44,7 @@
     pkgs.git
     pkgs.gnutar
     pkgs.jq
+    pkgs.nss.tools
     pkgs.starship
   ];
 

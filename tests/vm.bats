@@ -19,13 +19,15 @@ EOF
 }
 
 @test "materialize streams the profile without putting its contents in arguments or logs" {
-	printf 'secret-canary-profile\n' >"${BATS_TEST_TMPDIR}/profile.ovpn"
+	canary="secret-${RANDOM}-profile"
+	printf '%s\n' "${canary}" >"${BATS_TEST_TMPDIR}/profile.ovpn"
 	run "${VM_COMMAND}" init vault dev
 	run "${VM_COMMAND}" import-vpn vault dev "${BATS_TEST_TMPDIR}/profile.ovpn"
 	run "${VM_COMMAND}" materialize vault dev
 	[ "${status}" -eq 0 ]
 	grep -q '^exec -i vault-dev ' "${TART_LOG}"
-	! grep -q 'secret-canary-profile' "${TART_LOG}"
+	grep -q 'start.html' "${TART_LOG}"
+	! grep -q "${canary}" "${TART_LOG}"
 }
 
 @test "status reports identity and VM state without sensitive data" {
@@ -77,6 +79,22 @@ EOF
 	run "${VM_COMMAND}" import-vpn vault dev "${BATS_TEST_TMPDIR}/source.ovpn"
 	[ "${status}" -ne 0 ]
 	[[ "${output}" == *"already exists"* ]]
+}
+
+@test "bookmark and certificate imports preserve sources and reject collisions" {
+	printf '[{"title":"Synthetic","url":"https://synthetic.invalid"}]\n' >"${BATS_TEST_TMPDIR}/bookmarks.json"
+	printf 'synthetic certificate fixture\n' >"${BATS_TEST_TMPDIR}/test-ca.crt"
+	run "${VM_COMMAND}" init vault dev
+	run "${VM_COMMAND}" import-bookmarks vault dev "${BATS_TEST_TMPDIR}/bookmarks.json"
+	[ "${status}" -eq 0 ]
+	run "${VM_COMMAND}" import-cert vault dev "${BATS_TEST_TMPDIR}/test-ca.crt"
+	[ "${status}" -eq 0 ]
+	[ -f "${BATS_TEST_TMPDIR}/bookmarks.json" ]
+	[ -f "${BATS_TEST_TMPDIR}/test-ca.crt" ]
+	[ "$(stat -c '%a' "${VM_VPN_DATA_HOME}/vault/dev/bookmarks/bookmarks.json")" = "600" ]
+	[ "$(stat -c '%a' "${VM_VPN_DATA_HOME}/vault/dev/certs/test-ca.crt")" = "600" ]
+	run "${VM_COMMAND}" import-cert vault dev "${BATS_TEST_TMPDIR}/test-ca.crt"
+	[ "${status}" -ne 0 ]
 }
 
 @test "preflight rejects absent profile without exposing a path body" {
