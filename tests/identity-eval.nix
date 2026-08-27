@@ -3,6 +3,7 @@ let
   identity = import ../lib/identity.nix;
   mkWorkspace = import ../lib/mkWorkspace.nix;
   resolved = flake.workspaceRegistry."vault/dev";
+  second = flake.workspaceRegistry."consul/lab";
   invalid = builtins.tryEval (
     identity.resolve {
       productName = "Vault!";
@@ -36,6 +37,10 @@ assert resolved.vmPath == "vault/dev";
 assert resolved.displayName == "Vault - Development";
 assert resolved.productIcon != "";
 assert resolved.environmentIcon != "";
+assert second.vmName == "consul-lab";
+assert second.vmPath == "consul/lab";
+assert second.colors != resolved.colors;
+assert builtins.length flake.workspaceMatrix == 10;
 assert invalid.success == false;
 assert missing.success == false;
 assert duplicate.success == false;

@@ -15,12 +15,25 @@
     }:
     let
       workspaceFactory = import ./lib/mkWorkspace.nix;
-      workspace = workspaceFactory.make {
-        productName = "vault";
-        environmentName = "dev";
-        workspace = import ./workspaces/vault/dev.nix;
-      };
-      workspaceRegistry = workspaceFactory.registry [ workspace ];
+      workspaces = [
+        (workspaceFactory.make {
+          productName = "vault";
+          environmentName = "dev";
+          workspace = import ./workspaces/vault/dev.nix;
+        })
+        (workspaceFactory.make {
+          productName = "consul";
+          environmentName = "lab";
+          workspace = import ./workspaces/consul/lab.nix;
+        })
+      ];
+      workspaceRegistry = workspaceFactory.registry workspaces;
+      workspace = workspaceRegistry."vault/dev";
+      workspaceMatrix = builtins.genList (index: {
+        product = "matrix-${toString (index / 2)}";
+        environment = "fixture-${toString (index - (index / 2 * 2))}";
+        vmName = "matrix-${toString index}";
+      }) 10;
       darwinSystem = "aarch64-darwin";
       linuxSystem = "aarch64-linux";
       darwinPkgs = import nixpkgs {
@@ -49,13 +62,23 @@
         ];
         text = builtins.readFile ./scripts/vm;
       };
-      vaultDev = nixpkgs.lib.nixosSystem {
-        system = linuxSystem;
-        specialArgs = {
-          inherit openawsVpnClient workspace;
+      makeSystem =
+        resolvedWorkspace:
+        nixpkgs.lib.nixosSystem {
+          system = linuxSystem;
+          specialArgs = {
+            inherit openawsVpnClient;
+            workspace = resolvedWorkspace;
+          };
+          modules = [ ./systems/vault-dev.nix ];
         };
-        modules = [ ./systems/vault-dev.nix ];
-      };
+      workspaceSystems = builtins.listToAttrs (
+        map (resolvedWorkspace: {
+          name = resolvedWorkspace.vmName;
+          value = makeSystem resolvedWorkspace;
+        }) workspaces
+      );
+      vaultDev = workspaceSystems.vault-dev;
       vaultDevInstaller = nixpkgs.lib.nixosSystem {
         system = linuxSystem;
         specialArgs = { inherit workspace; };
@@ -82,10 +105,11 @@
         true;
     in
     {
-      inherit workspace workspaceRegistry;
+      inherit workspace workspaceMatrix workspaceRegistry;
 
-      nixosConfigurations.vault-dev = vaultDev;
-      nixosConfigurations.vault-dev-installer = vaultDevInstaller;
+      nixosConfigurations = workspaceSystems // {
+        vault-dev-installer = vaultDevInstaller;
+      };
 
       packages.${darwinSystem} = {
         inherit tart vm;

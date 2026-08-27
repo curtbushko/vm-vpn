@@ -155,3 +155,27 @@ EOF
 	[ "${status}" -ne 0 ]
 	[[ "${output}" == *"workspace is not configured"* ]]
 }
+
+@test "second workspace resolves independently" {
+	run "${VM_COMMAND}" identity consul lab
+	[ "${status}" -eq 0 ]
+	[[ "${output}" == *"VM_NAME=consul-lab"* ]]
+	[[ "${output}" == *"VM_PATH=consul/lab"* ]]
+}
+
+@test "two workspaces keep local data state and Tart names isolated" {
+	printf 'vault fixture\n' >"${BATS_TEST_TMPDIR}/vault.ovpn"
+	printf 'consul fixture\n' >"${BATS_TEST_TMPDIR}/consul.ovpn"
+	run "${VM_COMMAND}" init vault dev
+	run "${VM_COMMAND}" init consul lab
+	run "${VM_COMMAND}" import-vpn vault dev "${BATS_TEST_TMPDIR}/vault.ovpn"
+	run "${VM_COMMAND}" import-vpn consul lab "${BATS_TEST_TMPDIR}/consul.ovpn"
+	run "${VM_COMMAND}" up vault dev
+	[ "${status}" -eq 0 ]
+	run "${VM_COMMAND}" up consul lab
+	[ "${status}" -eq 0 ]
+	[ -f "${VM_VPN_DATA_HOME}/vault/dev/vpn/profile.ovpn" ]
+	[ -f "${VM_VPN_DATA_HOME}/consul/lab/vpn/profile.ovpn" ]
+	grep -q '^run vault-dev ' "${TART_LOG}"
+	grep -q '^run consul-lab ' "${TART_LOG}"
+}

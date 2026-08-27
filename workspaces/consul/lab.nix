@@ -1,0 +1,3 @@
+{
+  displayName = "Consul - Lab";
+}

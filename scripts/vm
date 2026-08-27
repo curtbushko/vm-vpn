@@ -34,7 +34,8 @@ workspace_dir() {
 validate_workspace() {
 	validate_name "PRODUCT" "$1"
 	validate_name "ENVIRONMENT" "$2"
-	if [[ "$1" != "vault" || "$2" != "dev" ]]; then
+	if ! nix eval --json "${VM_VPN_REPO_ROOT:-$PWD}#workspaceRegistry" |
+		jq -e --arg key "$1/$2" 'has($key)' >/dev/null; then
 		fail "workspace is not configured: $1/$2"
 	fi
 }
@@ -228,9 +229,7 @@ identity() {
 	validate_name "PRODUCT" "$product"
 	validate_name "ENVIRONMENT" "$environment"
 
-	if [[ "$product" != "vault" || "$environment" != "dev" ]]; then
-		fail "workspace is not configured: ${product}/${environment}"
-	fi
+	validate_workspace "$product" "$environment"
 
 	printf 'PRODUCT=%s\n' "$product"
 	printf 'ENVIRONMENT=%s\n' "$environment"
