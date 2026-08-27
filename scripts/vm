@@ -15,6 +15,7 @@ Usage:
   vm materialize PRODUCT ENVIRONMENT
   vm list
   vm up|down|restart|status PRODUCT ENVIRONMENT
+  vm rebuild PRODUCT ENVIRONMENT
   vm doctor
 
 Phase 1 exposes identity and host prerequisite checks. Lifecycle commands are
@@ -89,12 +90,59 @@ tart_command() {
 	"${TART_BIN:-tart}" "$@"
 }
 
+state_dir() {
+	printf '%s/%s/%s\n' "${VM_VPN_STATE_HOME:-${XDG_STATE_HOME:-${HOME}/.local/state}/vm-vpn}" "$1" "$2"
+}
+
+prepare_source_snapshot() {
+	local root revision snapshot
+	root="${VM_VPN_REPO_ROOT:-$PWD}"
+	revision="$(git -C "$root" rev-parse HEAD)"
+	snapshot="$(state_dir "$1" "$2")/sources/$revision"
+	if [[ ! -d "$snapshot" ]]; then
+		umask 077
+		mkdir -p "$snapshot"
+		git -C "$root" archive "$revision" | tar -C "$snapshot" -xf -
+	fi
+	printf '%s\n' "$snapshot"
+}
+
+vm_exists() {
+	tart_command get "$1" >/dev/null 2>&1
+}
+
+vm_create() {
+	local product="$1" environment="$2" name iso snapshot state_root
+	name="$product-$environment"
+	iso="${VM_VPN_INSTALLER_ISO:-}"
+	[[ -f "$iso" ]] || fail "VM_VPN_INSTALLER_ISO must name the built installer ISO"
+	snapshot="$(prepare_source_snapshot "$product" "$environment")"
+	state_root="$(state_dir "$product" "$environment")"
+	mkdir -p "$state_root"
+	tart_command create --linux "$name" --disk-size 80 --memory 16384 --cpu 6 --display 1920x1200
+	(tart_command run "$name" --no-graphics --disk "$iso:ro" --dir "repo:$snapshot:ro" >>"$state_root/installer.log" 2>&1 &)
+	for _ in {1..60}; do
+		if tart_command exec "$name" /run/current-system/sw/bin/bash -c \
+			'mkdir -p /mnt/shared; mountpoint -q /mnt/shared || mount -t virtiofs com.apple.virtio-fs.automount /mnt/shared; /mnt/shared/repo/scripts/install-vault-dev --device /dev/vda --repo /mnt/shared/repo --yes'; then
+			tart_command stop "$name"
+			printf 'created %s\n' "$name"
+			return 0
+		fi
+		sleep 2
+	done
+	fail "installer did not become ready; VM retained for recovery"
+}
+
 vm_status() {
 	validate_workspace "$1" "$2"
 	local name state
 	name="$1-$2"
 	if state="$(tart_command get "$name" 2>/dev/null | awk 'END { print $NF }')"; then
-		printf 'VM_NAME=%s\nVM_STATE=%s\nVPN_STATE=unknown\n' "$name" "${state:-available}"
+		local vpn_state="stopped"
+		if tart_command exec "$name" /run/current-system/sw/bin/test -f /run/vpn-workspace/vpn/profile.ovpn >/dev/null 2>&1; then
+			vpn_state="ready"
+		fi
+		printf 'VM_NAME=%s\nVM_STATE=%s\nVPN_STATE=%s\n' "$name" "${state:-available}" "$vpn_state"
 	else
 		printf 'VM_NAME=%s\nVM_STATE=absent\nVPN_STATE=stopped\n' "$name"
 	fi
@@ -108,13 +156,31 @@ vm_down() {
 
 vm_start() {
 	validate_workspace "$1" "$2"
-	local name state_root
+	local name state_root snapshot
 	name="$1-$2"
-	state_root="${VM_VPN_STATE_HOME:-${XDG_STATE_HOME:-${HOME}/.local/state}/vm-vpn}/$1/$2"
+	state_root="$(state_dir "$1" "$2")"
+	snapshot="$(prepare_source_snapshot "$1" "$2")"
 	umask 077
 	mkdir -p "$state_root"
-	(tart_command run "$name" --no-clipboard >>"$state_root/tart.log" 2>&1 &)
+	(tart_command run "$name" --no-clipboard --dir "repo:$snapshot:ro" >>"$state_root/tart.log" 2>&1 &)
 	printf 'started %s\n' "$name"
+}
+
+vm_rebuild() {
+	validate_workspace "$1" "$2"
+	local name
+	name="$1-$2"
+	vm_down "$1" "$2" >/dev/null
+	vm_start "$1" "$2" >/dev/null
+	for _ in {1..30}; do
+		if tart_command exec "$name" /run/current-system/sw/bin/bash -c \
+			'mkdir -p /mnt/shared; mountpoint -q /mnt/shared || mount -t virtiofs com.apple.virtio-fs.automount /mnt/shared; nixos-rebuild switch --flake /mnt/shared/repo#vault-dev'; then
+			printf 'rebuilt %s\n' "$name"
+			return 0
+		fi
+		sleep 1
+	done
+	fail "guest did not become ready for rebuild"
 }
 
 materialize() {
@@ -244,6 +310,9 @@ main() {
 		shift
 		[[ "$#" -eq 2 ]] || fail "up requires PRODUCT and ENVIRONMENT"
 		preflight "$@"
+		if ! vm_exists "$1-$2"; then
+			vm_create "$@"
+		fi
 		vm_start "$@"
 		wait_for_materialization "$@"
 		;;
@@ -252,6 +321,11 @@ main() {
 		[[ "$#" -eq 2 ]] || fail "restart requires PRODUCT and ENVIRONMENT"
 		vm_down "$@"
 		vm_start "$@"
+		;;
+	rebuild)
+		shift
+		[[ "$#" -eq 2 ]] || fail "rebuild requires PRODUCT and ENVIRONMENT"
+		vm_rebuild "$@"
 		;;
 	doctor)
 		shift

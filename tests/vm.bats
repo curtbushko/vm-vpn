@@ -11,11 +11,24 @@ setup() {
 #!/usr/bin/env bash
 printf '%s\n' "$*" >>"${TART_LOG}"
 case "$1" in
-get) printf 'OS CPU Memory Disk State\nlinux 6 16384 80 running\n' ;;
+get) [[ "${TART_ABSENT:-0}" != 1 ]] || exit 1; printf 'OS CPU Memory Disk State\nlinux 6 16384 80 running\n' ;;
 exec) cat >/dev/null ;;
 esac
 EOF
 	chmod +x "${TART_BIN}"
+}
+
+@test "up creates an absent VM through the backend before starting it" {
+	printf 'synthetic profile\n' >"${BATS_TEST_TMPDIR}/profile.ovpn"
+	printf 'synthetic iso\n' >"${BATS_TEST_TMPDIR}/installer.iso"
+	export VM_VPN_INSTALLER_ISO="${BATS_TEST_TMPDIR}/installer.iso"
+	export TART_ABSENT=1
+	run "${VM_COMMAND}" init vault dev
+	run "${VM_COMMAND}" import-vpn vault dev "${BATS_TEST_TMPDIR}/profile.ovpn"
+	run "${VM_COMMAND}" up vault dev
+	[ "${status}" -eq 0 ]
+	grep -q '^create --linux vault-dev ' "${TART_LOG}"
+	grep -q '^run vault-dev .*installer.iso' "${TART_LOG}"
 }
 
 @test "materialize streams the profile without putting its contents in arguments or logs" {
@@ -48,6 +61,15 @@ EOF
 		sleep 0.05
 	done
 	grep -q '^run vault-dev' "${TART_LOG}"
+	! grep -q 'delete' "${TART_LOG}"
+}
+
+@test "rebuild restarts with a read-only source snapshot and switches the guest" {
+	run "${VM_COMMAND}" rebuild vault dev
+	[ "${status}" -eq 0 ]
+	grep -q '^stop vault-dev$' "${TART_LOG}"
+	grep -q '^run vault-dev .*:ro' "${TART_LOG}"
+	grep -q 'nixos-rebuild switch --flake /mnt/shared/repo#vault-dev' "${TART_LOG}"
 	! grep -q 'delete' "${TART_LOG}"
 }
 

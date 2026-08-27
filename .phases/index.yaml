@@ -1,6 +1,6 @@
 project: "VPN Workspace VM"
 design: "../VPN_WORKSPACE_VM_DESIGN.md"
-current_phase: 4
+current_phase: 5
 phases:
   - id: 1
     name: "Vault Dev Vertical Slice"
@@ -20,12 +20,12 @@ phases:
   - id: 4
     name: "Lifecycle and Rebuild Workflow"
     file: "phase-04-lifecycle-and-rebuild-workflow.md"
-    status: in_progress
-    progress: "0/15"
+    status: complete
+    progress: "15/15"
   - id: 5
     name: "Multi-Workspace Isolation"
     file: "phase-05-multi-workspace-isolation.md"
-    status: pending
+    status: in_progress
     progress: "0/11"
   - id: 6
     name: "Hardening and Operations"
