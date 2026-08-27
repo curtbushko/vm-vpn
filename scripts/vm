@@ -1,0 +1,268 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+usage() {
+	cat <<'EOF'
+Usage:
+  vm --help
+  vm identity PRODUCT ENVIRONMENT
+  vm init PRODUCT ENVIRONMENT
+  vm import-vpn PRODUCT ENVIRONMENT SOURCE
+  vm import-bookmarks PRODUCT ENVIRONMENT SOURCE
+  vm import-cert PRODUCT ENVIRONMENT SOURCE
+  vm preflight PRODUCT ENVIRONMENT
+  vm materialize PRODUCT ENVIRONMENT
+  vm list
+  vm up|down|restart|status PRODUCT ENVIRONMENT
+  vm doctor
+
+Phase 1 exposes identity and host prerequisite checks. Lifecycle commands are
+added only after the Tart and NixOS vertical slice is proven.
+EOF
+}
+
+data_root() {
+	printf '%s\n' "${VM_VPN_DATA_HOME:-${XDG_DATA_HOME:-${HOME}/.local/share}/vm-vpn}"
+}
+
+workspace_dir() {
+	printf '%s/%s/%s\n' "$(data_root)" "$1" "$2"
+}
+
+validate_workspace() {
+	validate_name "PRODUCT" "$1"
+	validate_name "ENVIRONMENT" "$2"
+	if [[ "$1" != "vault" || "$2" != "dev" ]]; then
+		fail "workspace is not configured: $1/$2"
+	fi
+}
+
+init_workspace() {
+	validate_workspace "$1" "$2"
+	local root
+	root="$(workspace_dir "$1" "$2")"
+	umask 077
+	mkdir -p "$root/vpn" "$root/bookmarks" "$root/certs"
+	chmod 0700 "$root" "$root/vpn" "$root/bookmarks" "$root/certs"
+	printf 'initialized %s/%s\n' "$1" "$2"
+}
+
+import_file() {
+	local kind="$1"
+	local product="$2"
+	local environment="$3"
+	local source="$4"
+	validate_workspace "$product" "$environment"
+	[[ -f "$source" ]] || fail "source file is missing"
+	local root destination
+	root="$(workspace_dir "$product" "$environment")"
+	case "$kind" in
+	vpn) destination="$root/vpn/profile.ovpn" ;;
+	bookmarks) destination="$root/bookmarks/bookmarks.json" ;;
+	cert) destination="$root/certs/$(basename "$source")" ;;
+	esac
+	[[ ! -e "$destination" ]] || fail "$kind destination already exists"
+	umask 077
+	mkdir -p "$(dirname "$destination")"
+	cp "$source" "$destination"
+	chmod 0600 "$destination"
+	printf 'imported %s for %s/%s\n' "$kind" "$product" "$environment"
+}
+
+preflight() {
+	validate_workspace "$1" "$2"
+	local root profile
+	root="$(workspace_dir "$1" "$2")"
+	profile="$root/vpn/profile.ovpn"
+	[[ -f "$profile" ]] || fail "VPN profile is missing; run vm import-vpn"
+	[[ "$(stat -c '%a' "$root")" == "700" ]] || fail "workspace permissions must be 0700"
+	[[ "$(stat -c '%a' "$profile")" == "600" ]] || fail "VPN profile permissions must be 0600"
+	printf 'preflight passed for %s/%s\n' "$1" "$2"
+}
+
+list_workspaces() {
+	nix eval --json "${VM_VPN_REPO_ROOT:-$PWD}#workspaceRegistry" | jq -c 'to_entries[] | .value'
+}
+
+tart_command() {
+	"${TART_BIN:-tart}" "$@"
+}
+
+vm_status() {
+	validate_workspace "$1" "$2"
+	local name state
+	name="$1-$2"
+	if state="$(tart_command get "$name" 2>/dev/null | awk 'END { print $NF }')"; then
+		printf 'VM_NAME=%s\nVM_STATE=%s\nVPN_STATE=unknown\n' "$name" "${state:-available}"
+	else
+		printf 'VM_NAME=%s\nVM_STATE=absent\nVPN_STATE=stopped\n' "$name"
+	fi
+}
+
+vm_down() {
+	validate_workspace "$1" "$2"
+	tart_command stop "$1-$2"
+	printf 'stopped %s-%s\n' "$1" "$2"
+}
+
+vm_start() {
+	validate_workspace "$1" "$2"
+	local name state_root
+	name="$1-$2"
+	state_root="${VM_VPN_STATE_HOME:-${XDG_STATE_HOME:-${HOME}/.local/state}/vm-vpn}/$1/$2"
+	umask 077
+	mkdir -p "$state_root"
+	(tart_command run "$name" --no-clipboard >>"$state_root/tart.log" 2>&1 &)
+	printf 'started %s\n' "$name"
+}
+
+materialize() {
+	preflight "$1" "$2" >/dev/null
+	local root name
+	root="$(workspace_dir "$1" "$2")"
+	name="$1-$2"
+	tar -C "$root" -cf - . | tart_command exec -i "$name" /run/current-system/sw/bin/bash -c \
+		'umask 077; install -d -m 0700 /run/vpn-workspace/config/openaws-vpn-client; tar -C /run/vpn-workspace -xf -; printf "%s\n" /run/vpn-workspace/vpn/profile.ovpn > /run/vpn-workspace/config/openaws-vpn-client/last_ovpn; chmod -R go-rwx /run/vpn-workspace'
+	printf 'runtime material ready for %s\n' "$name"
+}
+
+wait_for_materialization() {
+	for _ in {1..30}; do
+		if materialize "$1" "$2"; then
+			return 0
+		fi
+		sleep 1
+	done
+	fail "guest did not become ready for runtime material"
+}
+
+fail() {
+	printf 'vm: %s\n' "$*" >&2
+	exit 1
+}
+
+validate_name() {
+	local kind="$1"
+	local value="$2"
+
+	if [[ ! "$value" =~ ^[a-z0-9]+(-[a-z0-9]+)*$ ]]; then
+		fail "${kind} must be lowercase hostname-safe text"
+	fi
+}
+
+identity() {
+	if [[ "$#" -ne 2 ]]; then
+		fail "identity requires PRODUCT and ENVIRONMENT"
+	fi
+
+	local product="$1"
+	local environment="$2"
+	validate_name "PRODUCT" "$product"
+	validate_name "ENVIRONMENT" "$environment"
+
+	if [[ "$product" != "vault" || "$environment" != "dev" ]]; then
+		fail "workspace is not configured: ${product}/${environment}"
+	fi
+
+	printf 'PRODUCT=%s\n' "$product"
+	printf 'ENVIRONMENT=%s\n' "$environment"
+	printf 'VM_NAME=%s-%s\n' "$product" "$environment"
+	printf 'VM_PATH=%s/%s\n' "$product" "$environment"
+}
+
+doctor() {
+	local missing=0
+	local command
+
+	for command in nix tart curl jq bats shellcheck shfmt; do
+		if command -v "$command" >/dev/null 2>&1; then
+			printf '%-12s %s\n' "$command" "available"
+		else
+			printf '%-12s %s\n' "$command" "missing" >&2
+			missing=1
+		fi
+	done
+
+	if [[ "$missing" -ne 0 ]]; then
+		fail "enter the repository development shell before running commands"
+	fi
+}
+
+main() {
+	if [[ "$#" -eq 0 ]]; then
+		usage
+		exit 1
+	fi
+
+	case "$1" in
+	-h | --help)
+		usage
+		;;
+	identity)
+		shift
+		identity "$@"
+		;;
+	init)
+		shift
+		[[ "$#" -eq 2 ]] || fail "init requires PRODUCT and ENVIRONMENT"
+		init_workspace "$@"
+		;;
+	import-vpn | import-bookmarks | import-cert)
+		local command="$1"
+		shift
+		[[ "$#" -eq 3 ]] || fail "$command requires PRODUCT ENVIRONMENT SOURCE"
+		import_file "${command#import-}" "$@"
+		;;
+	preflight)
+		shift
+		[[ "$#" -eq 2 ]] || fail "preflight requires PRODUCT and ENVIRONMENT"
+		preflight "$@"
+		;;
+	materialize)
+		shift
+		[[ "$#" -eq 2 ]] || fail "materialize requires PRODUCT and ENVIRONMENT"
+		materialize "$@"
+		;;
+	list)
+		shift
+		[[ "$#" -eq 0 ]] || fail "list does not accept arguments"
+		list_workspaces
+		;;
+	status)
+		shift
+		[[ "$#" -eq 2 ]] || fail "status requires PRODUCT and ENVIRONMENT"
+		vm_status "$@"
+		;;
+	down)
+		shift
+		[[ "$#" -eq 2 ]] || fail "down requires PRODUCT and ENVIRONMENT"
+		vm_down "$@"
+		;;
+	up)
+		shift
+		[[ "$#" -eq 2 ]] || fail "up requires PRODUCT and ENVIRONMENT"
+		preflight "$@"
+		vm_start "$@"
+		wait_for_materialization "$@"
+		;;
+	restart)
+		shift
+		[[ "$#" -eq 2 ]] || fail "restart requires PRODUCT and ENVIRONMENT"
+		vm_down "$@"
+		vm_start "$@"
+		;;
+	doctor)
+		shift
+		if [[ "$#" -ne 0 ]]; then
+			fail "doctor does not accept arguments"
+		fi
+		doctor
+		;;
+	*)
+		fail "unknown command: $1"
+		;;
+	esac
+}
+
+main "$@"

@@ -7,3 +7,7 @@ result-*
 
 # Ignore NixOS interactive test driver history
 **/.nixos-test-history
+
+# Repository-local non-sensitive VM build artifacts and lifecycle state
+.state/
+.trash/

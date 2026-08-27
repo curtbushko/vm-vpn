@@ -1,0 +1,34 @@
+project: "VPN Workspace VM"
+design: "../VPN_WORKSPACE_VM_DESIGN.md"
+current_phase: 2
+phases:
+  - id: 1
+    name: "Vault Dev Vertical Slice"
+    file: "phase-01-vault-dev-vertical-slice.md"
+    status: complete
+    progress: "20/20"
+  - id: 2
+    name: "Resolved Workspace Identity"
+    file: "phase-02-resolved-workspace-identity.md"
+    status: in_progress
+    progress: "0/13"
+  - id: 3
+    name: "Local-Only Sensitive Data"
+    file: "phase-03-local-only-sensitive-data.md"
+    status: pending
+    progress: "0/17"
+  - id: 4
+    name: "Lifecycle and Rebuild Workflow"
+    file: "phase-04-lifecycle-and-rebuild-workflow.md"
+    status: pending
+    progress: "0/15"
+  - id: 5
+    name: "Multi-Workspace Isolation"
+    file: "phase-05-multi-workspace-isolation.md"
+    status: pending
+    progress: "0/11"
+  - id: 6
+    name: "Hardening and Operations"
+    file: "phase-06-hardening-and-operations.md"
+    status: pending
+    progress: "0/11"

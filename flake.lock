@@ -1,0 +1,44 @@
+{
+  "nodes": {
+    "nixpkgs": {
+      "locked": {
+        "lastModified": 1787736819,
+        "narHash": "sha256-cV5xEJJK3BvhU8rEd4mC9UsmDi5qscv/kzGPhBRC5WA=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "9fbb54b33e91ee4ca368e35a78e0613c720600b3",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "ref": "nixos-unstable",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
+    "openaws-vpn-client": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1742343225,
+        "narHash": "sha256-TwtfAZ53fRA7LXRU/tfQdpccBq+6KAC/7GCpzHtiYFE=",
+        "owner": "jhrldev",
+        "repo": "openaws-vpn-client",
+        "rev": "a65966be4a44682c7a2c88cc9672645604bad0bf",
+        "type": "github"
+      },
+      "original": {
+        "owner": "jhrldev",
+        "repo": "openaws-vpn-client",
+        "type": "github"
+      }
+    },
+    "root": {
+      "inputs": {
+        "nixpkgs": "nixpkgs",
+        "openaws-vpn-client": "openaws-vpn-client"
+      }
+    }
+  },
+  "root": "root",
+  "version": 7
+}
