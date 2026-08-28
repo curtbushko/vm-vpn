@@ -18,9 +18,11 @@ copy and paste between macOS and every VM.
 
 ## Setup
 
-Run commands from the repository root. The development shell provides every
-required host tool. With direnv's shell hook enabled, approve this repository
-once and future visits will load the flake development shell automatically:
+Run commands from the repository root. Nix bootstraps the development shell,
+which provides every other required host tool. The shell deliberately keeps
+the host's Nix executable so it remains compatible with the host Nix
+configuration. With direnv's shell hook enabled, approve this repository once
+and future visits will load the flake development shell automatically:
 
 ```console
 direnv allow

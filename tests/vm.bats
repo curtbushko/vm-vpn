@@ -22,6 +22,8 @@ EOF
 @test "seed populates demo data and user-facing share settings" {
 	run "${VM_COMMAND}" seed demo dev
 	[ "${status}" -eq 0 ]
+	[[ "${output}" != *"warning: unknown setting 'eval-cores'"* ]]
+	[[ "${output}" != *"warning: unknown setting 'lazy-trees'"* ]]
 	root="${VM_VPN_DATA_HOME}/demo/dev"
 	[ "$(stat -c '%a' "${root}/vpn/profile.ovpn")" = "600" ]
 	[ "$(stat -c '%a' "${root}/bookmarks/bookmarks.json")" = "600" ]

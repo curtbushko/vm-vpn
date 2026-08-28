@@ -56,7 +56,6 @@
           darwinPkgs.gnutar
           darwinPkgs.git
           darwinPkgs.jq
-          darwinPkgs.nix
           darwinPkgs.nixfmt
           darwinPkgs.openssl
           darwinPkgs.ripgrep
@@ -161,7 +160,6 @@
           darwinPkgs.git
           darwinPkgs.jq
           darwinPkgs.nixfmt
-          darwinPkgs.nix
           darwinPkgs.openssh
           darwinPkgs.openssl
           darwinPkgs.ripgrep
