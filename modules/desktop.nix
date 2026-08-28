@@ -40,6 +40,7 @@
     XDG_SESSION_DESKTOP = "Hyprland";
     XCURSOR_THEME = "Adwaita";
     XCURSOR_SIZE = "24";
+    GTK_THEME = "Adwaita:dark";
   };
 
   environment.systemPackages = [

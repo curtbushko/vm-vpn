@@ -35,10 +35,22 @@ assert builtins.match ".*DisplayBookmarksToolbar.*always.*" firefoxPolicyBase !=
 assert builtins.match ".*ExtensionSettings.*vm-vpn-theme.*" firefoxPolicyBase != null;
 assert builtins.match ".*${workspace.colors.background}.*" firefoxThemeManifest != null;
 assert builtins.match ".*${workspace.colors.accent}.*" firefoxThemeManifest != null;
+assert builtins.match ".*color_scheme.*dark.*" firefoxThemeManifest != null;
+assert builtins.match ".*content_color_scheme.*dark.*" firefoxThemeManifest != null;
+assert builtins.match ".*browser[.]theme[.]content-theme.*2.*" firefoxPolicyBase != null;
+assert
+  builtins.match ".*446900e4-71c2-419f-a6a7-df9c091e268b.*bitwarden-password-manager.*" firefoxPolicyBase
+  != null;
+assert
+  builtins.match ".*d634138d-c276-4fc8-924b-40a0ea21d284.*1password-x-password-manager.*" firefoxPolicyBase
+  != null;
+assert system.environment.sessionVariables.GTK_THEME == "Adwaita:dark";
 assert builtins.elem "firefox" packageNames;
 assert builtins.elem "ghostty" packageNames;
 assert builtins.elem "neovim" packageNames;
 assert builtins.elem "starship" packageNames;
+assert system.programs.starship.presets == [ "catppuccin-powerline" ];
+assert system.programs.starship.settings == { };
 assert builtins.elem "quickshell" packageNames;
 assert builtins.elem "fuzzel" packageNames;
 assert builtins.elem "openaws-vpn-client" packageNames;

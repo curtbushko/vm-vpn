@@ -27,6 +27,10 @@ let
       popup_text = "#${workspace.colors.foreground}";
       popup_border = "#${workspace.colors.accent}";
     };
+    theme.properties = {
+      color_scheme = "dark";
+      content_color_scheme = "dark";
+    };
   };
   firefoxTheme = pkgs.runCommand "vm-vpn-firefox-theme.xpi" { nativeBuildInputs = [ pkgs.zip ]; } ''
     mkdir theme
@@ -45,9 +49,27 @@ let
       };
       NewTabPage = false;
       NoDefaultBookmarks = true;
+      Preferences = {
+        "browser.theme.content-theme" = {
+          Value = 2;
+          Status = "locked";
+        };
+        "layout.css.prefers-color-scheme.content-override" = {
+          Value = 0;
+          Status = "locked";
+        };
+      };
       ExtensionSettings."vm-vpn-theme@vm-vpn" = {
         installation_mode = "force_installed";
         install_url = "file://${firefoxTheme}";
+      };
+      ExtensionSettings."{446900e4-71c2-419f-a6a7-df9c091e268b}" = {
+        installation_mode = "force_installed";
+        install_url = "https://addons.mozilla.org/firefox/downloads/latest/bitwarden-password-manager/latest.xpi";
+      };
+      ExtensionSettings."{d634138d-c276-4fc8-924b-40a0ea21d284}" = {
+        installation_mode = "force_installed";
+        install_url = "https://addons.mozilla.org/firefox/downloads/latest/1password-x-password-manager/latest.xpi";
       };
     };
   };

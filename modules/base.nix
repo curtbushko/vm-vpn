@@ -34,10 +34,7 @@
 
   programs.zsh.enable = true;
   programs.starship.enable = true;
-  programs.starship.settings = {
-    add_newline = false;
-    format = "[${workspace.statusText}](bold purple) $all";
-  };
+  programs.starship.presets = [ "catppuccin-powerline" ];
 
   environment.systemPackages = [
     pkgs.curl
