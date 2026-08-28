@@ -69,6 +69,7 @@ assert builtins.elem "fuzzel" packageNames;
 assert builtins.elem "aws-vpn-client" packageNames;
 assert awsVpnPackage.drvAttrs.patchedOpenvpnVersion == "2.6.3-aws";
 assert builtins.match ".*BUF_SIZE_MAX 1 << 21.*" awsVpnPackage.drvAttrs.patchesText != null;
+assert builtins.elem "--disable-dco" awsVpnPackage.passthru.openvpnPatched.drvAttrs.configureFlags;
 assert builtins.match ".*aws-vpn-connect.*" awsVpnPackage.drvAttrs.postInstall != null;
 assert
   builtins.match ".*/run/vpn-workspace/vpn/profile[.]ovpn.*" awsVpnPackage.drvAttrs.connectScript

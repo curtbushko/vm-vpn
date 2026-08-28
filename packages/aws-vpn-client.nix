@@ -14,13 +14,14 @@
 }:
 
 let
-  openvpnPatched = openvpn.overrideAttrs (_: {
+  openvpnPatched = openvpn.overrideAttrs (old: {
     version = "2.6.3-aws";
     src = fetchurl {
       url = "https://swupdate.openvpn.org/community/releases/openvpn-2.6.3.tar.gz";
       hash = "sha256-E7IHo3bYiAUHx0/3iqvDd4qdpHyJ8eJH3O48cjcTj/Y=";
     };
     patches = [ "${src}/patches/openvpn-v2.6.3-aws.patch" ];
+    configureFlags = (old.configureFlags or [ ]) ++ [ "--disable-dco" ];
   });
 in
 buildGoModule {
