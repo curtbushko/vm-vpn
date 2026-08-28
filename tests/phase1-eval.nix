@@ -59,11 +59,8 @@ assert system.programs.starship.settings == { };
 assert builtins.elem "quickshell" packageNames;
 assert builtins.elem "fuzzel" packageNames;
 assert builtins.elem "openaws-vpn-client" packageNames;
-assert builtins.match ".*ApplicationFlags::NON_UNIQUE.*" openawsPackage.drvAttrs.postPatch != null;
-assert builtins.match ".*connect_startup.*" openawsPackage.drvAttrs.postPatch != null;
-assert builtins.match ".*emit_by_name.*activate.*" openawsPackage.drvAttrs.postPatch == null;
-assert
-  builtins.match ".*win_container[.]win.*is_some.*return.*" openawsPackage.drvAttrs.postPatch != null;
+assert builtins.match ".*ApplicationFlags::NON_UNIQUE.*" openawsPackage.drvAttrs.postPatch == null;
+assert builtins.match ".*connect_startup.*" openawsPackage.drvAttrs.postPatch == null;
 assert builtins.match ".*default_width[(]720[)].*" openawsPackage.drvAttrs.postPatch != null;
 assert builtins.match ".*default_height[(]520[)].*" openawsPackage.drvAttrs.postPatch != null;
 assert builtins.match ".*GTK_CSD.*1.*" openawsPackage.drvAttrs.postInstall != null;
@@ -93,7 +90,8 @@ assert
   != null;
 assert builtins.match ".*property int activeWorkspace.*" quickshellConfig != null;
 assert builtins.match ".*model: 4.*" quickshellConfig != null;
-assert builtins.match ".*dispatch.*workspace.*index [+] 1.*" quickshellConfig != null;
+assert builtins.match ".*hl[.]dsp[.]focus.*workspace.*index [+] 1.*" quickshellConfig != null;
+assert builtins.match ".*for workspaceId = 1, 4 do.*hl[.]dsp[.]focus.*" hyprlandConfig != null;
 assert
   flake.packages.aarch64-linux.openaws-vpn-client == builtins.head (
     builtins.filter (

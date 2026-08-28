@@ -106,6 +106,9 @@
     hl.bind(mainMod .. " + Q", hl.dsp.window.close())
     hl.bind(mainMod .. " + L", hl.dsp.exec_cmd([[${pkgs.swaylock}/bin/swaylock --color ${workspace.colors.background}]]))
     hl.bind(mainMod .. " + SHIFT + E", hl.dsp.exit())
+    for workspaceId = 1, 4 do
+      hl.bind(mainMod .. " + " .. workspaceId, hl.dsp.focus({ workspace = workspaceId }))
+    end
   '';
 
   environment.etc."xdg/fuzzel/fuzzel.ini".text = ''
@@ -264,7 +267,7 @@
 
                 MouseArea {
                   anchors.fill: parent
-                  onClicked: Quickshell.execDetached(["${pkgs.hyprland}/bin/hyprctl", "dispatch", "workspace", (index + 1).toString()])
+                  onClicked: Quickshell.execDetached(["${pkgs.hyprland}/bin/hyprctl", "eval", "return hl.dispatch(hl.dsp.focus({ workspace = " + (index + 1) + " }))"])
                 }
               }
             }

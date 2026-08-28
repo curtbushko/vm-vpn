@@ -51,8 +51,6 @@ rustPlatform.buildRustPackage {
       --replace-fail '        println!("Saved at {:?}", &file_dir);' "" \
       --replace-fail '        println!("Remote {:?}", &remote);' ""
     substituteInPlace src/main.rs \
-      --replace-fail '.application_id("com.github.JonathanxD.OpenAwsVpnClient")' '.application_id("com.github.JonathanxD.OpenAwsVpnClient").flags(gtk::gio::ApplicationFlags::NON_UNIQUE)' \
-      --replace-fail '        app.connect_activate(move |app| {' '        app.connect_startup(move |app| { if win_container.win.lock().unwrap().is_some() { return; }' \
       --replace-fail '.default_width(320)' '.default_width(720)' \
       --replace-fail '.default_height(260)' '.default_height(520)'
   '';
