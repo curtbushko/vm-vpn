@@ -99,9 +99,8 @@ EOF
 	run "${VM_COMMAND}" import-vpn demo dev "${BATS_TEST_TMPDIR}/profile.ovpn"
 	run "${VM_COMMAND}" up demo dev
 	[ "${status}" -eq 0 ]
-	grep -q '^create --linux demo-dev ' "${TART_LOG}"
-	grep -q -- '--display 1440x900' "${TART_LOG}"
-	grep -q '^set demo-dev --display-refit$' "${TART_LOG}"
+	grep -q '^create --linux demo-dev --disk-size 80$' "${TART_LOG}"
+	grep -q '^set demo-dev --cpu 6 --memory 16384 --display 1440x900 --display-refit$' "${TART_LOG}"
 	grep -q '^run demo-dev .*installer.iso' "${TART_LOG}"
 }
 
