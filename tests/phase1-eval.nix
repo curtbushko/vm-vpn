@@ -64,6 +64,9 @@ assert builtins.match ".*app[.]activate[(][)];.*" openawsPackage.drvAttrs.postPa
 assert builtins.match ".*app[.]register.*Cancellable.*" openawsPackage.drvAttrs.postPatch != null;
 assert
   builtins.match ".*win_container[.]win.*is_some.*return.*" openawsPackage.drvAttrs.postPatch != null;
+assert builtins.match ".*default_width[(]720[)].*" openawsPackage.drvAttrs.postPatch != null;
+assert builtins.match ".*default_height[(]520[)].*" openawsPackage.drvAttrs.postPatch != null;
+assert builtins.match ".*GTK_CSD.*1.*" openawsPackage.drvAttrs.postInstall != null;
 assert builtins.match ".*local mainMod = \"SUPER\".*" hyprlandConfig != null;
 assert
   builtins.match ".*hl[.]bind[(]mainMod [.][.] \" [+] SPACE\".*fuzzel.*" hyprlandConfig != null;

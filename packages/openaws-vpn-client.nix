@@ -53,6 +53,8 @@ rustPlatform.buildRustPackage {
     substituteInPlace src/main.rs \
       --replace-fail '.application_id("com.github.JonathanxD.OpenAwsVpnClient")' '.application_id("com.github.JonathanxD.OpenAwsVpnClient").flags(gtk::gio::ApplicationFlags::NON_UNIQUE)' \
       --replace-fail '        app.connect_activate(move |app| {' '        app.connect_activate(move |app| { if win_container.win.lock().unwrap().is_some() { return; }' \
+      --replace-fail '.default_width(320)' '.default_width(720)' \
+      --replace-fail '.default_height(260)' '.default_height(520)' \
       --replace-fail '        app.run();' '        app.register(None::<&gtk::gio::Cancellable>).unwrap(); app.activate(); app.run();'
   '';
 
@@ -62,7 +64,8 @@ rustPlatform.buildRustPackage {
       --set-default OPENVPN_FILE "${openvpnPatched}/bin/openvpn" \
       --set-default SHARED_DIR "$out/share" \
       --set-default XDG_CONFIG_HOME "/run/vpn-workspace/config" \
-      --set-default XDG_DATA_HOME "/run/vpn-workspace/data"
+      --set-default XDG_DATA_HOME "/run/vpn-workspace/data" \
+      --set-default GTK_CSD "1"
   '';
 
   propagatedUserEnvPkgs = [ xdg-utils ];
