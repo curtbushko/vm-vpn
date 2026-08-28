@@ -93,6 +93,13 @@
       },
     })
 
+    hl.window_rule({
+      name = "openaws-vpn-client-float",
+      match = { class = "openaws-vpn-client" },
+      float = true,
+      center = true,
+    })
+
     hl.bind(mainMod .. " + RETURN", hl.dsp.exec_cmd([[${pkgs.ghostty}/bin/ghostty]]))
     hl.bind(mainMod .. " + SPACE", hl.dsp.exec_cmd([[${pkgs.fuzzel}/bin/fuzzel]]))
     hl.bind(mainMod .. " + B", hl.dsp.exec_cmd([=[${pkgs.bash}/bin/bash -c 'if [[ -f /run/vpn-workspace/start.html ]]; then exec ${pkgs.firefox}/bin/firefox file:///run/vpn-workspace/start.html; else exec ${pkgs.firefox}/bin/firefox; fi']=]))
@@ -140,11 +147,26 @@
       id: shell
       property bool vpnReady: false
       property string clockText: ""
+      property int activeWorkspace: 1
 
       Process {
         id: vpnCheck
         command: ["${pkgs.coreutils}/bin/test", "-f", "/run/vpn-workspace/vpn/profile.ovpn"]
         onExited: (exitCode, exitStatus) => shell.vpnReady = exitCode === 0
+      }
+
+      Process {
+        id: workspaceCheck
+        command: ["${pkgs.hyprland}/bin/hyprctl", "activeworkspace", "-j"]
+        stdout: StdioCollector {
+          onStreamFinished: {
+            try {
+              shell.activeWorkspace = JSON.parse(text).id
+            } catch (error) {
+              console.warn("Unable to read active Hyprland workspace:", error)
+            }
+          }
+        }
       }
 
       Timer {
@@ -155,6 +177,7 @@
         onTriggered: {
           shell.clockText = Qt.formatDateTime(new Date(), "ddd  MMM d   h:mm AP")
           if (!vpnCheck.running) vpnCheck.running = true
+          if (!workspaceCheck.running) workspaceCheck.running = true
         }
       }
 
@@ -213,6 +236,37 @@
               anchors.fill: parent
               hoverEnabled: true
               onClicked: Quickshell.execDetached(["${pkgs.fuzzel}/bin/fuzzel"])
+            }
+          }
+
+          RowLayout {
+            spacing: 6
+
+            Repeater {
+              model: 4
+
+              Rectangle {
+                required property int index
+                Layout.preferredWidth: 28
+                Layout.preferredHeight: 28
+                radius: 8
+                color: shell.activeWorkspace === index + 1 ? "#${workspace.colors.accent}" : "#302a3a"
+                border.color: "#51475f"
+
+                Text {
+                  anchors.centerIn: parent
+                  text: (index + 1).toString()
+                  color: "#${workspace.colors.foreground}"
+                  font.family: "JetBrainsMono Nerd Font"
+                  font.bold: true
+                  font.pixelSize: 12
+                }
+
+                MouseArea {
+                  anchors.fill: parent
+                  onClicked: Quickshell.execDetached(["${pkgs.hyprland}/bin/hyprctl", "dispatch", "workspace", (index + 1).toString()])
+                }
+              }
             }
           }
 

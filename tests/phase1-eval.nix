@@ -60,7 +60,7 @@ assert builtins.elem "quickshell" packageNames;
 assert builtins.elem "fuzzel" packageNames;
 assert builtins.elem "openaws-vpn-client" packageNames;
 assert builtins.match ".*ApplicationFlags::NON_UNIQUE.*" openawsPackage.drvAttrs.postPatch != null;
-assert builtins.match ".*app[.]activate[(][)];.*" openawsPackage.drvAttrs.postPatch != null;
+assert builtins.match ".*app[.]activate[(][)];.*" openawsPackage.drvAttrs.postPatch == null;
 assert builtins.match ".*app[.]register.*Cancellable.*" openawsPackage.drvAttrs.postPatch != null;
 assert builtins.match ".*local mainMod = \"SUPER\".*" hyprlandConfig != null;
 assert
@@ -83,6 +83,12 @@ assert builtins.match ".*firefoxLauncher[.]running.*" quickshellConfig == null;
 assert system.environment.sessionVariables.XCURSOR_THEME == "Adwaita";
 assert system.environment.sessionVariables.XCURSOR_SIZE == "24";
 assert builtins.match ".*setcursor Adwaita 24.*" hyprlandConfig != null;
+assert
+  builtins.match ".*hl[.]window_rule.*class = \"openaws-vpn-client\".*float = true.*" hyprlandConfig
+  != null;
+assert builtins.match ".*property int activeWorkspace.*" quickshellConfig != null;
+assert builtins.match ".*model: 4.*" quickshellConfig != null;
+assert builtins.match ".*dispatch.*workspace.*index [+] 1.*" quickshellConfig != null;
 assert
   flake.packages.aarch64-linux.openaws-vpn-client == builtins.head (
     builtins.filter (
