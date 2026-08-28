@@ -16,6 +16,10 @@ assert workspace.vmName == "vault-dev";
 assert workspace.vmPath == "vault/dev";
 assert system.networking.hostName == "vault-dev";
 assert system.programs.hyprland.enable;
+assert
+  builtins.match ".*start-hyprland.*" system.services.greetd.settings.initial_session.command != null;
+assert
+  builtins.match ".*start-hyprland.*" system.services.greetd.settings.default_session.command != null;
 assert builtins.length (builtins.split "bordercolor" hyprlandConfig) == 1;
 assert builtins.hasAttr "tart-guest-agent" system.systemd.services;
 assert builtins.hasAttr "tart-guest-agent" installer.systemd.services;
