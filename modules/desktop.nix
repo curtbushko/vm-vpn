@@ -90,7 +90,7 @@
 
     hl.bind(mainMod .. " + RETURN", hl.dsp.exec_cmd([[${pkgs.ghostty}/bin/ghostty]]))
     hl.bind(mainMod .. " + SPACE", hl.dsp.exec_cmd([[${pkgs.fuzzel}/bin/fuzzel]]))
-    hl.bind(mainMod .. " + B", hl.dsp.exec_cmd([[${pkgs.bash}/bin/bash -c 'if [[ -f /run/vpn-workspace/start.html ]]; then exec ${pkgs.firefox}/bin/firefox file:///run/vpn-workspace/start.html; else exec ${pkgs.firefox}/bin/firefox; fi']]))
+    hl.bind(mainMod .. " + B", hl.dsp.exec_cmd([=[${pkgs.bash}/bin/bash -c 'if [[ -f /run/vpn-workspace/start.html ]]; then exec ${pkgs.firefox}/bin/firefox file:///run/vpn-workspace/start.html; else exec ${pkgs.firefox}/bin/firefox; fi']=]))
     hl.bind(mainMod .. " + Q", hl.dsp.window.close())
     hl.bind(mainMod .. " + L", hl.dsp.exec_cmd([[${pkgs.swaylock}/bin/swaylock --color ${workspace.colors.background}]]))
     hl.bind(mainMod .. " + SHIFT + E", hl.dsp.exit())

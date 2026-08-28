@@ -36,6 +36,7 @@ assert builtins.elem "openaws-vpn-client" packageNames;
 assert builtins.match ".*local mainMod = \"SUPER\".*" hyprlandConfig != null;
 assert
   builtins.match ".*hl[.]bind[(]mainMod [.][.] \" [+] SPACE\".*fuzzel.*" hyprlandConfig != null;
+assert builtins.match ".*[[][=][[].*start[.]html.*[]][=][]].*" hyprlandConfig != null;
 assert builtins.match ".*Applications.*" quickshellConfig != null;
 assert builtins.match ".*Firefox.*" quickshellConfig != null;
 assert builtins.match ".*Ghostty.*" quickshellConfig != null;
