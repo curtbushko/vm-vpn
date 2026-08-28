@@ -51,9 +51,12 @@ rustPlatform.buildRustPackage {
       --replace-fail '        println!("Saved at {:?}", &file_dir);' "" \
       --replace-fail '        println!("Remote {:?}", &remote);' ""
     substituteInPlace src/main.rs \
+      --replace-fail '        app.connect_activate(move |app| {' '        app.connect_startup(move |app| {' \
+      --replace-fail '            let win = ApplicationWindow::builder()' '            let header = gtk::HeaderBar::builder().title("Open AWS VPN Client").show_close_button(true).build(); let win = ApplicationWindow::builder()' \
+      --replace-fail '                .decorated(true)' '                .decorated(true).titlebar(&header)' \
       --replace-fail '.default_width(320)' '.default_width(720)' \
       --replace-fail '.default_height(260)' '.default_height(520)' \
-      --replace-fail '        app.run();' '        let activate_app = app.clone(); gtk::glib::idle_add_local_once(move || activate_app.emit_by_name::<()>("activate", &[])); app.run();'
+      --replace-fail '            win.show_all();' '            win.show_all(); win.present(); app.hold(); let release_app = app.clone(); win.connect_destroy(move |_| release_app.release());'
   '';
 
   postInstall = ''
@@ -63,7 +66,7 @@ rustPlatform.buildRustPackage {
       --set-default SHARED_DIR "$out/share" \
       --set-default XDG_CONFIG_HOME "/run/vpn-workspace/config" \
       --set-default XDG_DATA_HOME "/run/vpn-workspace/data" \
-      --set-default GTK_CSD "1"
+      --set GTK_CSD "1"
   '';
 
   propagatedUserEnvPkgs = [ xdg-utils ];
