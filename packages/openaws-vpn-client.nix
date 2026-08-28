@@ -51,14 +51,13 @@ rustPlatform.buildRustPackage {
       --replace-fail '        println!("Saved at {:?}", &file_dir);' "" \
       --replace-fail '        println!("Remote {:?}", &remote);' ""
     substituteInPlace src/main.rs \
-      --replace-fail 'fn main() {' 'fn main() { gtk::init().unwrap();' \
+      --replace-fail '.application_id("com.github.JonathanxD.OpenAwsVpnClient")' '.application_id("com.github.JonathanxD.OpenAwsVpnClient").flags(gtk::gio::ApplicationFlags::NON_UNIQUE)' \
       --replace-fail '            let win = ApplicationWindow::builder()' '            let header = gtk::HeaderBar::builder().title("Open AWS VPN Client").show_close_button(true).build(); let win = ApplicationWindow::builder()' \
       --replace-fail '                .decorated(true)' '                .decorated(true)' \
       --replace-fail '            let main_grid = build_main_grid(vpn_app.clone());' '            win.set_titlebar(Some(&header)); let main_grid = build_main_grid(vpn_app.clone());' \
       --replace-fail '.default_width(320)' '.default_width(720)' \
       --replace-fail '.default_height(260)' '.default_height(520)' \
-      --replace-fail '            win.show_all();' '            win.show_all(); win.present(); app.hold(); let release_app = app.clone(); win.connect_destroy(move |_| release_app.release());' \
-      --replace-fail '        app.run();' '        app.register(None::<&gtk::gio::Cancellable>).unwrap(); app.emit_by_name::<()>("activate", &[]); app.run();'
+      --replace-fail '        app.run();' '        app.register(None::<&gtk::gio::Cancellable>).unwrap(); app.activate(); app.run();'
   '';
 
   postInstall = ''
