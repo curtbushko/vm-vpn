@@ -51,4 +51,5 @@ assert builtins.elem "curl" shellPackageNames;
 assert builtins.elem "direnv" shellPackageNames;
 assert builtins.elem "openssh" shellPackageNames;
 assert builtins.elem "tart" shellPackageNames;
+assert builtins.elem "daemonize" shellPackageNames;
 true

@@ -52,6 +52,7 @@
           darwinPkgs.bats
           darwinPkgs.curl
           darwinPkgs.coreutils
+          darwinPkgs.daemonize
           darwinPkgs.gawk
           darwinPkgs.gnutar
           darwinPkgs.git
@@ -154,6 +155,7 @@
           darwinPkgs.bats
           darwinPkgs.curl
           darwinPkgs.coreutils
+          darwinPkgs.daemonize
           darwinPkgs.direnv
           darwinPkgs.gawk
           darwinPkgs.gnutar

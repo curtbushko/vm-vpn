@@ -8,7 +8,7 @@ setup() {
 	export VM_VPN_CONFIG_HOME="${BATS_TEST_TMPDIR}/config"
 	export TART_LOG="${BATS_TEST_TMPDIR}/tart.log"
 	export TART_BIN="${BATS_TEST_TMPDIR}/tart"
-	export LAUNCHCTL_BIN="${BATS_TEST_TMPDIR}/launchctl"
+	export DAEMONIZE_BIN="${BATS_TEST_TMPDIR}/daemonize"
 	cat >"${TART_BIN}" <<'EOF'
 #!/usr/bin/env bash
 printf '%s\n' "$*" >>"${TART_LOG}"
@@ -18,14 +18,17 @@ exec) cat >/dev/null ;;
 esac
 EOF
 	chmod +x "${TART_BIN}"
-	cat >"${LAUNCHCTL_BIN}" <<'EOF'
+	cat >"${DAEMONIZE_BIN}" <<'EOF'
 #!/usr/bin/env bash
-[[ "$1" == "remove" ]] && exit 0
-while [[ "$1" != "--" ]]; do shift; done
-shift
+while [[ "$1" == -* ]]; do
+	case "$1" in
+	-a) shift ;;
+	-e | -o | -p) shift 2 ;;
+	esac
+done
 "$@"
 EOF
-	chmod +x "${LAUNCHCTL_BIN}"
+	chmod +x "${DAEMONIZE_BIN}"
 }
 
 @test "seed populates demo data and user-facing share settings" {
@@ -151,8 +154,9 @@ EOF
 }
 
 @test "graphical VM launch is detached from the development shell" {
-	grep -Fq 'launchctl_bin" submit' "${VM_COMMAND}"
-	grep -Fq 'vm-vpn.${name}' "${VM_COMMAND}"
+	grep -Fq 'daemonize_bin" -a' "${VM_COMMAND}"
+	run grep -Fq 'launchctl submit' "${VM_COMMAND}"
+	[ "${status}" -ne 0 ]
 }
 
 @test "rebuild restarts with a read-only source snapshot and switches the guest" {
