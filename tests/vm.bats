@@ -101,7 +101,9 @@ EOF
 	[ "${status}" -eq 0 ]
 	grep -q '^create --linux demo-dev --disk-size 80$' "${TART_LOG}"
 	grep -q '^set demo-dev --cpu 6 --memory 16384 --display 1440x900 --display-refit$' "${TART_LOG}"
-	grep -q '^run demo-dev .*installer.iso' "${TART_LOG}"
+	grep -q '^run demo-dev .*installer.iso.*--dir .*:ro,tag=repo' "${TART_LOG}"
+	grep -q 'mount -t virtiofs repo /mnt/shared/repo' "${TART_LOG}"
+	grep -q -- '--resume' "${TART_LOG}"
 }
 
 @test "materialize streams the profile without putting its contents in arguments or logs" {
