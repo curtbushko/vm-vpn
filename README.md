@@ -19,7 +19,14 @@ copy and paste between macOS and every VM.
 ## Setup
 
 Run commands from the repository root. The development shell provides every
-required host tool.
+required host tool. With direnv's shell hook enabled, approve this repository
+once and future visits will load the flake development shell automatically:
+
+```console
+direnv allow
+```
+
+Without direnv integration, enter the same environment manually:
 
 ```console
 nix develop

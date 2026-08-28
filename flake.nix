@@ -155,6 +155,7 @@
           darwinPkgs.bats
           darwinPkgs.curl
           darwinPkgs.coreutils
+          darwinPkgs.direnv
           darwinPkgs.gawk
           darwinPkgs.gnutar
           darwinPkgs.git
