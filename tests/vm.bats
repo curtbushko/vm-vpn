@@ -8,6 +8,7 @@ setup() {
 	export VM_VPN_CONFIG_HOME="${BATS_TEST_TMPDIR}/config"
 	export TART_LOG="${BATS_TEST_TMPDIR}/tart.log"
 	export TART_BIN="${BATS_TEST_TMPDIR}/tart"
+	export LAUNCHCTL_BIN="${BATS_TEST_TMPDIR}/launchctl"
 	cat >"${TART_BIN}" <<'EOF'
 #!/usr/bin/env bash
 printf '%s\n' "$*" >>"${TART_LOG}"
@@ -17,6 +18,14 @@ exec) cat >/dev/null ;;
 esac
 EOF
 	chmod +x "${TART_BIN}"
+	cat >"${LAUNCHCTL_BIN}" <<'EOF'
+#!/usr/bin/env bash
+[[ "$1" == "remove" ]] && exit 0
+while [[ "$1" != "--" ]]; do shift; done
+shift
+"$@"
+EOF
+	chmod +x "${LAUNCHCTL_BIN}"
 }
 
 @test "seed populates demo data and user-facing share settings" {
@@ -142,7 +151,8 @@ EOF
 }
 
 @test "graphical VM launch is detached from the development shell" {
-	grep -Eq 'nohup .*tart_bin.* run ' "${VM_COMMAND}"
+	grep -Fq 'launchctl_bin" submit' "${VM_COMMAND}"
+	grep -Fq 'vm-vpn.${name}' "${VM_COMMAND}"
 }
 
 @test "rebuild restarts with a read-only source snapshot and switches the guest" {

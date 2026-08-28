@@ -290,7 +290,7 @@ vm_down() {
 
 vm_start() {
 	validate_workspace "$1" "$2"
-	local name state_root snapshot config share_name share_path tart_bin
+	local name state_root snapshot config share_name share_path tart_bin launchctl_bin
 	local -a share_args
 	name="$1-$2"
 	state_root="$(state_dir "$1" "$2")"
@@ -305,7 +305,10 @@ vm_start() {
 	umask 077
 	mkdir -p "$state_root"
 	tart_bin="${TART_BIN:-$(command -v tart)}"
-	nohup "$tart_bin" run "$name" --no-audio "${share_args[@]}" </dev/null >>"$state_root/tart.log" 2>&1 &
+	launchctl_bin="${LAUNCHCTL_BIN:-launchctl}"
+	"$launchctl_bin" remove "vm-vpn.${name}" >/dev/null 2>&1 || true
+	"$launchctl_bin" submit -l "vm-vpn.${name}" -o "$state_root/tart.log" -e "$state_root/tart.log" -- \
+		"$tart_bin" run "$name" --no-audio "${share_args[@]}"
 	printf 'started %s\n' "$name"
 }
 
