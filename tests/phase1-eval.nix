@@ -26,6 +26,12 @@ assert system.programs.hyprland.enable;
 assert system.services.resolved.enable;
 assert system.networking.networkmanager.dns == "systemd-resolved";
 assert
+  system.networking.networkmanager.ensureProfiles.profiles.vm-vpn-uplink.ipv4.ignore-auto-dns
+  == "true";
+assert
+  system.networking.networkmanager.ensureProfiles.profiles.vm-vpn-uplink.ipv4.dns
+  == "1.1.1.1;8.8.8.8;";
+assert
   builtins.match ".*start-hyprland.*" system.services.greetd.settings.initial_session.command != null;
 assert
   builtins.match ".*start-hyprland.*" system.services.greetd.settings.default_session.command != null;

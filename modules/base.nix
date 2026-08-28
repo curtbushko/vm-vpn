@@ -11,6 +11,23 @@
 
   networking.networkmanager.enable = true;
   networking.networkmanager.dns = "systemd-resolved";
+  networking.networkmanager.ensureProfiles.profiles.vm-vpn-uplink = {
+    connection = {
+      id = "vm-vpn-uplink";
+      type = "ethernet";
+      interface-name = "enp0s1";
+      autoconnect = true;
+    };
+    ipv4 = {
+      method = "auto";
+      ignore-auto-dns = "true";
+      dns = "1.1.1.1;8.8.8.8;";
+    };
+    ipv6 = {
+      method = "auto";
+      ignore-auto-dns = "true";
+    };
+  };
   networking.firewall.enable = true;
   services.resolved.enable = true;
 
