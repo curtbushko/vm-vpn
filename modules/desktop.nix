@@ -52,6 +52,7 @@
 
   environment.etc."xdg/hypr/hyprland.conf".text = ''
     monitor = ,preferred,auto,1
+    $mainMod = SUPER
 
     exec-once = ${pkgs.swaybg}/bin/swaybg --image /etc/vm-vpn/wallpaper.svg --mode fill
     exec-once = ${pkgs.quickshell}/bin/qs --path /etc/xdg/quickshell/${workspace.vmName}
@@ -78,12 +79,12 @@
       background_color = rgb(${workspace.colors.background})
     }
 
-    bind = SUPER, RETURN, exec, ${pkgs.ghostty}/bin/ghostty
-    bind = SUPER, SPACE, exec, ${pkgs.fuzzel}/bin/fuzzel
-    bind = SUPER, B, exec, ${pkgs.bash}/bin/bash -c 'if [[ -f /run/vpn-workspace/start.html ]]; then exec ${pkgs.firefox}/bin/firefox file:///run/vpn-workspace/start.html; else exec ${pkgs.firefox}/bin/firefox; fi'
-    bind = SUPER, Q, killactive
-    bind = SUPER, L, exec, ${pkgs.swaylock}/bin/swaylock --color ${workspace.colors.background}
-    bind = SUPER SHIFT, E, exit
+    bind = $mainMod, RETURN, exec, ${pkgs.ghostty}/bin/ghostty
+    bind = $mainMod, SPACE, exec, ${pkgs.fuzzel}/bin/fuzzel
+    bind = $mainMod, B, exec, ${pkgs.bash}/bin/bash -c 'if [[ -f /run/vpn-workspace/start.html ]]; then exec ${pkgs.firefox}/bin/firefox file:///run/vpn-workspace/start.html; else exec ${pkgs.firefox}/bin/firefox; fi'
+    bind = $mainMod, Q, killactive
+    bind = $mainMod, L, exec, ${pkgs.swaylock}/bin/swaylock --color ${workspace.colors.background}
+    bind = $mainMod SHIFT, E, exit
 
   '';
 

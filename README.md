@@ -11,7 +11,10 @@ Super+B for Firefox, Super+Return for Ghostty, and Super+L to lock. Click
 **Applications** in the top menu bar or press Super+Space to search installed
 graphical applications. The bottom dock directly launches Firefox, Ghostty,
 and the VPN client. Neovim remains available from Ghostty and the command line
-rather than the graphical menus.
+rather than the graphical menus. The Mac Command key is Hyprland's main
+modifier, so Command+Space, Command+Return, Command+B, and Command+L invoke the
+same shortcuts shown as `Super` inside Linux. Clipboard sharing is enabled for
+copy and paste between macOS and every VM.
 
 ## Setup
 

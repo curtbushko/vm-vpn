@@ -63,6 +63,8 @@ EOF
 	[ "${status}" -eq 0 ]
 	expected_path="$(realpath "${BATS_TEST_TMPDIR}/source")"
 	grep -q -- "--dir source:${expected_path}" "${TART_LOG}"
+	run grep -q -- '--no-clipboard' "${TART_LOG}"
+	[ "${status}" -ne 0 ]
 	grep -q 'bash -lc' "${TART_LOG}"
 	grep -q 'mount -t virtiofs com.apple.virtio-fs.automount /run/vm-vpn-host' "${TART_LOG}"
 	grep -q 'mount -o remount,bind,ro.*source' "${TART_LOG}"
@@ -113,6 +115,8 @@ EOF
 		sleep 0.05
 	done
 	grep -q '^run vault-dev' "${TART_LOG}"
+	run grep -q -- '--no-clipboard' "${TART_LOG}"
+	[ "${status}" -ne 0 ]
 	! grep -q 'delete' "${TART_LOG}"
 }
 

@@ -248,7 +248,7 @@ vm_start() {
 	fi
 	umask 077
 	mkdir -p "$state_root"
-	(tart_command run "$name" --no-audio --no-clipboard "${share_args[@]}" >>"$state_root/tart.log" 2>&1 &)
+	(tart_command run "$name" --no-audio "${share_args[@]}" >>"$state_root/tart.log" 2>&1 &)
 	printf 'started %s\n' "$name"
 }
 

@@ -30,6 +30,8 @@ setup() {
 @test "README documents graphical application launching" {
 	grep -Fq 'Applications' "${README}"
 	grep -Fq 'Super+Space' "${README}"
+	grep -Fq 'Command key' "${README}"
+	grep -Fq 'Clipboard sharing is enabled' "${README}"
 	grep -Fq 'bottom dock directly launches Firefox' "${README}"
 	grep -Fq 'and the VPN client' "${README}"
 }

@@ -2,9 +2,10 @@
 
 ## Interaction and sharing policy
 
-Lifecycle starts disable host clipboard and audio. Drag/drop and downloads do
-not receive an implicit writable host share. A read-only snapshot of the
-committed repository is always mounted at `/mnt/shared/repo`.
+Lifecycle starts disable host audio and enable clipboard sharing for copy and
+paste between macOS and the guest. Drag/drop and downloads do not receive an
+implicit writable host share. A read-only snapshot of the committed repository
+is always mounted at `/mnt/shared/repo`.
 
 Users can configure additional allowlisted directories with `vm share-add`.
 Settings are stored locally at
