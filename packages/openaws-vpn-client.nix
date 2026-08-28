@@ -53,7 +53,7 @@ rustPlatform.buildRustPackage {
     substituteInPlace src/main.rs \
       --replace-fail '.default_width(320)' '.default_width(720)' \
       --replace-fail '.default_height(260)' '.default_height(520)' \
-      --replace-fail '        app.run();' '        let activate_app = app.clone(); gtk::glib::idle_add_local_once(move || activate_app.activate()); app.run();'
+      --replace-fail '        app.run();' '        let activate_app = app.clone(); gtk::glib::idle_add_local_once(move || activate_app.emit_by_name::<()>("activate", &[])); app.run();'
   '';
 
   postInstall = ''
