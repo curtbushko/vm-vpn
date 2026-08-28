@@ -38,10 +38,13 @@
     NIXOS_OZONE_WL = "1";
     XDG_CURRENT_DESKTOP = "Hyprland";
     XDG_SESSION_DESKTOP = "Hyprland";
+    XCURSOR_THEME = "Adwaita";
+    XCURSOR_SIZE = "24";
   };
 
   environment.systemPackages = [
     pkgs.hyprland
+    pkgs.adwaita-icon-theme
     pkgs.fuzzel
     pkgs.polkit_gnome
     pkgs.quickshell
@@ -64,6 +67,7 @@
       hl.exec_cmd([[${pkgs.swaybg}/bin/swaybg --image /etc/vm-vpn/wallpaper.svg --mode fill]])
       hl.exec_cmd([[${pkgs.quickshell}/bin/qs --path /etc/xdg/quickshell/${workspace.vmName}]])
       hl.exec_cmd([[${pkgs.polkit_gnome}/libexec/polkit-gnome-authentication-agent-1]])
+      hl.exec_cmd([[${pkgs.hyprland}/bin/hyprctl setcursor Adwaita 24]])
     end)
 
     hl.config({
@@ -142,26 +146,6 @@
         onExited: (exitCode, exitStatus) => shell.vpnReady = exitCode === 0
       }
 
-      Process {
-        id: appLauncher
-        command: ["${pkgs.fuzzel}/bin/fuzzel"]
-      }
-
-      Process {
-        id: firefoxLauncher
-        command: ["${pkgs.bash}/bin/bash", "-lc", "if [[ -f /run/vpn-workspace/start.html ]]; then exec ${pkgs.firefox}/bin/firefox file:///run/vpn-workspace/start.html; else exec ${pkgs.firefox}/bin/firefox; fi"]
-      }
-
-      Process {
-        id: terminalLauncher
-        command: ["${pkgs.ghostty}/bin/ghostty"]
-      }
-
-      Process {
-        id: vpnLauncher
-        command: ["${openawsVpnClient}/bin/openaws-vpn-client"]
-      }
-
       Timer {
         interval: 5000
         repeat: true
@@ -227,7 +211,7 @@
               id: appsMouse
               anchors.fill: parent
               hoverEnabled: true
-              onClicked: if (!appLauncher.running) appLauncher.running = true
+              onClicked: Quickshell.execDetached(["${pkgs.fuzzel}/bin/fuzzel"])
             }
           }
 
@@ -292,21 +276,21 @@
               Layout.preferredWidth: 110; Layout.preferredHeight: 46; radius: 12
               color: firefoxMouse.containsMouse ? "#3f384a" : "transparent"
               Text { anchors.centerIn: parent; text: "󰈹  Firefox"; color: "#ffffff"; font.family: "JetBrainsMono Nerd Font"; font.pixelSize: 13 }
-              MouseArea { id: firefoxMouse; anchors.fill: parent; hoverEnabled: true; onClicked: if (!firefoxLauncher.running) firefoxLauncher.running = true }
+              MouseArea { id: firefoxMouse; anchors.fill: parent; hoverEnabled: true; onClicked: Quickshell.execDetached(["${pkgs.firefox}/bin/firefox", "file:///run/vpn-workspace/start.html"]) }
             }
 
             Rectangle {
               Layout.preferredWidth: 110; Layout.preferredHeight: 46; radius: 12
               color: terminalMouse.containsMouse ? "#3f384a" : "transparent"
               Text { anchors.centerIn: parent; text: "󰆍  Ghostty"; color: "#ffffff"; font.family: "JetBrainsMono Nerd Font"; font.pixelSize: 13 }
-              MouseArea { id: terminalMouse; anchors.fill: parent; hoverEnabled: true; onClicked: if (!terminalLauncher.running) terminalLauncher.running = true }
+              MouseArea { id: terminalMouse; anchors.fill: parent; hoverEnabled: true; onClicked: Quickshell.execDetached(["${pkgs.ghostty}/bin/ghostty"]) }
             }
 
             Rectangle {
               Layout.preferredWidth: 138; Layout.preferredHeight: 46; radius: 12
               color: vpnMouse.containsMouse ? "#3f384a" : "transparent"
               Text { anchors.centerIn: parent; text: "󰖂  Open VPN client"; color: "#ffffff"; font.family: "JetBrainsMono Nerd Font"; font.pixelSize: 13 }
-              MouseArea { id: vpnMouse; anchors.fill: parent; hoverEnabled: true; onClicked: if (!vpnLauncher.running) vpnLauncher.running = true }
+              MouseArea { id: vpnMouse; anchors.fill: parent; hoverEnabled: true; onClicked: Quickshell.execDetached(["${openawsVpnClient}/bin/openaws-vpn-client"]) }
             }
           }
         }

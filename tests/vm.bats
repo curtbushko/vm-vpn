@@ -129,6 +129,10 @@ EOF
 	[ "${status}" -eq 0 ]
 	grep -q '^exec -i demo-dev ' "${TART_LOG}"
 	grep -q 'start.html' "${TART_LOG}"
+	grep -q 'firefox-policies.json' "${TART_LOG}"
+	grep -q 'Placement.*toolbar' "${TART_LOG}"
+	grep -q 'firefox-policies-base.json' "${TART_LOG}"
+	grep -q 'chown -R vpn:users /run/vpn-workspace' "${TART_LOG}"
 	! grep -q "${canary}" "${TART_LOG}"
 }
 
