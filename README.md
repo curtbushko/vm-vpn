@@ -7,7 +7,11 @@ the initial workspace is `vault/dev`. The VM name is
 
 The guest provides Hyprland, Quickshell, Firefox, Ghostty, Neovim, Starship,
 and the native ARM64 `openaws-vpn-client`. It does not use Rosetta. Press
-Super+B for Firefox, Super+Return for Ghostty, and Super+L to lock.
+Super+B for Firefox, Super+Return for Ghostty, and Super+L to lock. Click
+**Applications** in the top menu bar or press Super+Space to search installed
+graphical applications. The bottom dock directly launches Firefox, Ghostty,
+and the VPN client. Neovim remains available from Ghostty and the command line
+rather than the graphical menus.
 
 ## Setup
 

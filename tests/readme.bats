@@ -26,3 +26,10 @@ setup() {
 	grep -Fq '"mode": "ro"' "${README}"
 	grep -Fq '"mode": "rw"' "${README}"
 }
+
+@test "README documents graphical application launching" {
+	grep -Fq 'Applications' "${README}"
+	grep -Fq 'Super+Space' "${README}"
+	grep -Fq 'bottom dock directly launches Firefox' "${README}"
+	grep -Fq 'and the VPN client' "${README}"
+}

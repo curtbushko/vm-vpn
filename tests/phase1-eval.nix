@@ -4,6 +4,7 @@ let
   system = flake.nixosConfigurations.vault-dev.config;
   installer = flake.nixosConfigurations.vault-dev-installer.config;
   hyprlandConfig = system.environment.etc."xdg/hypr/hyprland.conf".text;
+  quickshellConfig = system.environment.etc."xdg/quickshell/vault-dev/shell.qml".text;
   packageNames = map (package: package.pname or package.name) system.environment.systemPackages;
   shellPackageNames = map (
     package: package.pname or package.name
@@ -24,7 +25,15 @@ assert builtins.elem "ghostty" packageNames;
 assert builtins.elem "neovim" packageNames;
 assert builtins.elem "starship" packageNames;
 assert builtins.elem "quickshell" packageNames;
+assert builtins.elem "fuzzel" packageNames;
 assert builtins.elem "openaws-vpn-client" packageNames;
+assert builtins.match ".*SUPER, SPACE, exec,.*fuzzel.*" hyprlandConfig != null;
+assert builtins.match ".*Applications.*" quickshellConfig != null;
+assert builtins.match ".*Firefox.*" quickshellConfig != null;
+assert builtins.match ".*Ghostty.*" quickshellConfig != null;
+assert builtins.match ".*Open VPN client.*" quickshellConfig != null;
+assert builtins.match ".*Neovim.*" quickshellConfig == null;
+assert builtins.match ".*color: \"#25212f\".*" quickshellConfig != null;
 assert
   flake.packages.aarch64-linux.openaws-vpn-client == builtins.head (
     builtins.filter (
