@@ -99,6 +99,8 @@ EOF
 	[ "${status}" -ne 0 ]
 	grep -q 'bash -lc' "${TART_LOG}"
 	grep -q 'mount -t virtiofs repo /mnt/shared/repo' "${TART_LOG}"
+	grep -q 'test -f /mnt/shared/repo/flake.nix' "${TART_LOG}"
+	grep -Fq '|| return 1' "${VM_COMMAND}"
 	grep -q 'mount -t virtiofs.*vm-vpn-.* source ro$' "${TART_LOG}"
 }
 
