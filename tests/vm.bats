@@ -5,6 +5,7 @@ setup() {
 	VM_COMMAND="${REPO_ROOT}/scripts/vm"
 	export VM_VPN_DATA_HOME="${BATS_TEST_TMPDIR}/data"
 	export VM_VPN_STATE_HOME="${BATS_TEST_TMPDIR}/state"
+	export VM_VPN_CONFIG_HOME="${BATS_TEST_TMPDIR}/config"
 	export TART_LOG="${BATS_TEST_TMPDIR}/tart.log"
 	export TART_BIN="${BATS_TEST_TMPDIR}/tart"
 	cat >"${TART_BIN}" <<'EOF'
@@ -16,6 +17,55 @@ exec) cat >/dev/null ;;
 esac
 EOF
 	chmod +x "${TART_BIN}"
+}
+
+@test "share-add records a validated read-only setting by default" {
+	mkdir -p "${BATS_TEST_TMPDIR}/host source"
+	run "${VM_COMMAND}" share-add vault dev source "${BATS_TEST_TMPDIR}/host source"
+	[ "${status}" -eq 0 ]
+	[ "$(stat -c '%a' "${VM_VPN_CONFIG_HOME}/vault/dev/shares.json")" = "600" ]
+	run "${VM_COMMAND}" share-list vault dev
+	[ "${status}" -eq 0 ]
+	[[ "${output}" == *'"name":"source"'* ]]
+	[[ "${output}" == *'"mode":"ro"'* ]]
+}
+
+@test "share-add requires explicit opt-in for read-write and rejects collisions" {
+	mkdir -p "${BATS_TEST_TMPDIR}/output"
+	run "${VM_COMMAND}" share-add vault dev output "${BATS_TEST_TMPDIR}/output" --read-write
+	[ "${status}" -eq 0 ]
+	run "${VM_COMMAND}" share-add vault dev output "${BATS_TEST_TMPDIR}/output"
+	[ "${status}" -ne 0 ]
+	[[ "${output}" == *"already configured"* ]]
+	run "${VM_COMMAND}" share-list vault dev
+	[[ "${output}" == *'"mode":"rw"'* ]]
+}
+
+@test "share-remove removes only the named setting" {
+	mkdir -p "${BATS_TEST_TMPDIR}/one" "${BATS_TEST_TMPDIR}/two"
+	run "${VM_COMMAND}" share-add vault dev one "${BATS_TEST_TMPDIR}/one"
+	run "${VM_COMMAND}" share-add vault dev two "${BATS_TEST_TMPDIR}/two"
+	run "${VM_COMMAND}" share-remove vault dev one
+	[ "${status}" -eq 0 ]
+	run "${VM_COMMAND}" share-list vault dev
+	[[ "${output}" != *'"name":"one"'* ]]
+	[[ "${output}" == *'"name":"two"'* ]]
+	[ -d "${BATS_TEST_TMPDIR}/one" ]
+}
+
+@test "configured host shares are passed to Tart with the committed snapshot" {
+	printf 'fixture\n' >"${BATS_TEST_TMPDIR}/profile.ovpn"
+	mkdir -p "${BATS_TEST_TMPDIR}/source"
+	run "${VM_COMMAND}" init vault dev
+	run "${VM_COMMAND}" import-vpn vault dev "${BATS_TEST_TMPDIR}/profile.ovpn"
+	run "${VM_COMMAND}" share-add vault dev source "${BATS_TEST_TMPDIR}/source"
+	run "${VM_COMMAND}" up vault dev
+	[ "${status}" -eq 0 ]
+	expected_path="$(realpath "${BATS_TEST_TMPDIR}/source")"
+	grep -q -- "--dir source:${expected_path}" "${TART_LOG}"
+	grep -q 'bash -lc' "${TART_LOG}"
+	grep -q 'mount -t virtiofs com.apple.virtio-fs.automount /run/vm-vpn-host' "${TART_LOG}"
+	grep -q 'mount -o remount,bind,ro.*source' "${TART_LOG}"
 }
 
 @test "up creates an absent VM through the backend before starting it" {
@@ -67,10 +117,14 @@ EOF
 }
 
 @test "rebuild restarts with a read-only source snapshot and switches the guest" {
+	mkdir -p "${BATS_TEST_TMPDIR}/rebuild-source"
+	run "${VM_COMMAND}" share-add vault dev rebuild-source "${BATS_TEST_TMPDIR}/rebuild-source"
+	[ "${status}" -eq 0 ]
 	run "${VM_COMMAND}" rebuild vault dev
 	[ "${status}" -eq 0 ]
 	grep -q '^stop vault-dev$' "${TART_LOG}"
-	grep -q '^run vault-dev .*:ro' "${TART_LOG}"
+	grep -q '^run vault-dev .*--dir repo:' "${TART_LOG}"
+	grep -q 'mount -o remount,bind,ro.*rebuild-source' "${TART_LOG}"
 	grep -q 'nixos-rebuild switch --flake /mnt/shared/repo#vault-dev' "${TART_LOG}"
 	! grep -q 'delete' "${TART_LOG}"
 }

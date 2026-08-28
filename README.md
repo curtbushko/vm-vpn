@@ -11,6 +11,8 @@ nix develop
 vm doctor
 vm init vault dev
 vm import-vpn vault dev /path/to/profile.ovpn
+vm share-add vault dev source /absolute/path/to/source
+vm share-list vault dev
 vm up vault dev
 vm status vault dev
 vm down vault dev
@@ -29,3 +31,8 @@ Sensitive files live outside Git under `~/.local/share/vm-vpn`. See
 Run `vm check` before commits. If startup fails, use
 `vm diagnose PRODUCT ENVIRONMENT`; it reports presence and modes without
 reading sensitive contents.
+
+Host shares are local per-workspace settings. They are read-only unless
+`--read-write` is explicitly passed to `share-add`, and appear in the guest as
+`/mnt/shared/NAME`. Use `vm share-remove PRODUCT ENVIRONMENT NAME` to remove a
+setting; it never removes the host directory.

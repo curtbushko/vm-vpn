@@ -34,3 +34,8 @@ Append dated restart notes here. Keep `.phases/index.yaml` synchronized.
   remain deferred: real SAML, real client connection, guest VPN DNS/routes,
   approved internal reachability, and unchanged host networking during one or
   two live VPN sessions. Synthetic results must not be cited as those facts.
+- Follow-up: added local per-workspace `share-add`, `share-list`, and
+  `share-remove` settings. Paths are validated and mounted by name under
+  `/mnt/shared`; read-only is the default and read-write requires an explicit
+  flag. Lifecycle keeps Tart's aggregate backing mount root-only and exposes
+  each named directory through a bind mount with its configured access mode.
