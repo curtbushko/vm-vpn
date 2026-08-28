@@ -60,6 +60,7 @@ assert builtins.elem "quickshell" packageNames;
 assert builtins.elem "fuzzel" packageNames;
 assert builtins.elem "openaws-vpn-client" packageNames;
 assert builtins.match ".*ApplicationFlags::NON_UNIQUE.*" openawsPackage.drvAttrs.postPatch != null;
+assert builtins.match ".*app[.]activate[(][)];.*" openawsPackage.drvAttrs.postPatch != null;
 assert builtins.match ".*local mainMod = \"SUPER\".*" hyprlandConfig != null;
 assert
   builtins.match ".*hl[.]bind[(]mainMod [.][.] \" [+] SPACE\".*fuzzel.*" hyprlandConfig != null;
