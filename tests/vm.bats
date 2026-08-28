@@ -141,6 +141,10 @@ EOF
 	! grep -q 'delete' "${TART_LOG}"
 }
 
+@test "graphical VM launch is detached from the development shell" {
+	grep -Eq 'nohup .*tart_bin.* run ' "${VM_COMMAND}"
+}
+
 @test "rebuild restarts with a read-only source snapshot and switches the guest" {
 	mkdir -p "${BATS_TEST_TMPDIR}/rebuild-source"
 	run "${VM_COMMAND}" share-add demo dev rebuild-source "${BATS_TEST_TMPDIR}/rebuild-source"

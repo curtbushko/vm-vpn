@@ -290,7 +290,7 @@ vm_down() {
 
 vm_start() {
 	validate_workspace "$1" "$2"
-	local name state_root snapshot config share_name share_path
+	local name state_root snapshot config share_name share_path tart_bin
 	local -a share_args
 	name="$1-$2"
 	state_root="$(state_dir "$1" "$2")"
@@ -304,7 +304,8 @@ vm_start() {
 	fi
 	umask 077
 	mkdir -p "$state_root"
-	(tart_command run "$name" --no-audio "${share_args[@]}" >>"$state_root/tart.log" 2>&1 &)
+	tart_bin="${TART_BIN:-$(command -v tart)}"
+	nohup "$tart_bin" run "$name" --no-audio "${share_args[@]}" </dev/null >>"$state_root/tart.log" 2>&1 &
 	printf 'started %s\n' "$name"
 }
 
