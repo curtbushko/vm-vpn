@@ -122,11 +122,11 @@
     import QtQuick.Layouts
     import Quickshell
     import Quickshell.Io
-    import Quickshell.Services.SystemClock
 
     ShellRoot {
       id: shell
       property bool vpnReady: false
+      property string clockText: ""
 
       Process {
         id: vpnCheck
@@ -154,17 +154,15 @@
         command: ["${openawsVpnClient}/bin/openaws-vpn-client"]
       }
 
-      SystemClock {
-        id: clock
-        precision: SystemClock.Seconds
-      }
-
       Timer {
         interval: 5000
         repeat: true
         running: true
         triggeredOnStart: true
-        onTriggered: if (!vpnCheck.running) vpnCheck.running = true
+        onTriggered: {
+          shell.clockText = Qt.formatDateTime(new Date(), "ddd  MMM d   h:mm AP")
+          if (!vpnCheck.running) vpnCheck.running = true
+        }
       }
 
       PanelWindow {
@@ -251,7 +249,7 @@
           }
 
           Text {
-            text: Qt.formatDateTime(clock.date, "ddd  MMM d   h:mm AP")
+            text: shell.clockText
             color: "#ffffff"
             font.family: "JetBrainsMono Nerd Font"
             font.pixelSize: 13

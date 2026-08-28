@@ -39,6 +39,8 @@ assert builtins.match ".*Ghostty.*" quickshellConfig != null;
 assert builtins.match ".*Open VPN client.*" quickshellConfig != null;
 assert builtins.match ".*Neovim.*" quickshellConfig == null;
 assert builtins.match ".*color: \"#25212f\".*" quickshellConfig != null;
+assert builtins.match ".*Quickshell.Services.SystemClock.*" quickshellConfig == null;
+assert builtins.match ".*clockText.*" quickshellConfig != null;
 assert
   flake.packages.aarch64-linux.openaws-vpn-client == builtins.head (
     builtins.filter (
