@@ -28,6 +28,8 @@ EOF
 	run "${VM_COMMAND}" up vault dev
 	[ "${status}" -eq 0 ]
 	grep -q '^create --linux vault-dev ' "${TART_LOG}"
+	grep -q -- '--display 1440x900' "${TART_LOG}"
+	grep -q '^set vault-dev --display-refit$' "${TART_LOG}"
 	grep -q '^run vault-dev .*installer.iso' "${TART_LOG}"
 }
 
