@@ -94,12 +94,12 @@ EOF
 	run "${VM_COMMAND}" up demo dev
 	[ "${status}" -eq 0 ]
 	expected_path="$(realpath "${BATS_TEST_TMPDIR}/source")"
-	grep -q -- "--dir source:${expected_path}" "${TART_LOG}"
+	grep -q -- "--dir ${expected_path}:ro,tag=vm-vpn-source" "${TART_LOG}"
 	run grep -q -- '--no-clipboard' "${TART_LOG}"
 	[ "${status}" -ne 0 ]
 	grep -q 'bash -lc' "${TART_LOG}"
-	grep -q 'mount -t virtiofs com.apple.virtio-fs.automount /run/vm-vpn-host' "${TART_LOG}"
-	grep -q 'mount -o remount,bind,ro.*source' "${TART_LOG}"
+	grep -q 'mount -t virtiofs repo /mnt/shared/repo' "${TART_LOG}"
+	grep -q 'mount -t virtiofs.*vm-vpn-.* source ro$' "${TART_LOG}"
 }
 
 @test "up creates an absent VM through the backend before starting it" {
@@ -166,8 +166,8 @@ EOF
 	run "${VM_COMMAND}" rebuild demo dev
 	[ "${status}" -eq 0 ]
 	grep -q '^stop demo-dev$' "${TART_LOG}"
-	grep -q '^run demo-dev .*--dir repo:' "${TART_LOG}"
-	grep -q 'mount -o remount,bind,ro.*rebuild-source' "${TART_LOG}"
+	grep -q '^run demo-dev .*--dir .*:ro,tag=repo' "${TART_LOG}"
+	grep -q 'mount -t virtiofs.*vm-vpn-.* rebuild-source ro$' "${TART_LOG}"
 	grep -q 'nixos-rebuild switch --flake /mnt/shared/repo#demo-dev' "${TART_LOG}"
 	! grep -q 'delete' "${TART_LOG}"
 }

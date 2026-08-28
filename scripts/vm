@@ -290,17 +290,21 @@ vm_down() {
 
 vm_start() {
 	validate_workspace "$1" "$2"
-	local name state_root snapshot config share_name share_path tart_bin daemonize_bin
+	local name state_root snapshot config share_name share_path share_mode tart_bin daemonize_bin
 	local -a share_args
 	name="$1-$2"
 	state_root="$(state_dir "$1" "$2")"
 	snapshot="$(prepare_source_snapshot "$1" "$2")"
-	share_args=(--dir "repo:$snapshot")
+	share_args=(--dir "$snapshot:ro,tag=repo")
 	config="$(share_config_file "$1" "$2")"
 	if [[ -f "$config" ]]; then
-		while IFS=$'\t' read -r share_name share_path; do
-			share_args+=(--dir "$share_name:$share_path")
-		done < <(jq -r '.[] | [.name, .path] | @tsv' "$config")
+		while IFS=$'\t' read -r share_name share_path share_mode; do
+			if [[ "$share_mode" == "ro" ]]; then
+				share_args+=(--dir "$share_path:ro,tag=vm-vpn-$share_name")
+			else
+				share_args+=(--dir "$share_path:tag=vm-vpn-$share_name")
+			fi
+		done < <(jq -r '.[] | [.name, .path, .mode] | @tsv' "$config")
 	fi
 	umask 077
 	mkdir -p "$state_root"
@@ -314,13 +318,13 @@ vm_start() {
 mount_configured_shares() {
 	local product="$1" environment="$2" name="$1-$2" config share_name
 	tart_command exec "$name" /run/current-system/sw/bin/bash -lc \
-		'install -d -m 0700 /run/vm-vpn-host; mountpoint -q /run/vm-vpn-host || mount -t virtiofs com.apple.virtio-fs.automount /run/vm-vpn-host; mkdir -p /mnt/shared/repo; mountpoint -q /mnt/shared/repo || mount --bind /run/vm-vpn-host/repo /mnt/shared/repo; mount -o remount,bind,ro /mnt/shared/repo'
+		'mkdir -p /mnt/shared/repo; mountpoint -q /mnt/shared/repo || mount -t virtiofs repo /mnt/shared/repo'
 	config="$(share_config_file "$product" "$environment")"
 	if [[ -f "$config" ]]; then
 		while IFS=$'\t' read -r share_name share_mode; do
 			# shellcheck disable=SC2016 # Positional expansion belongs in the guest shell.
 			tart_command exec "$name" /run/current-system/sw/bin/bash -lc \
-				'mkdir -p "/mnt/shared/$1"; mountpoint -q "/mnt/shared/$1" || mount --bind "/run/vm-vpn-host/$1" "/mnt/shared/$1"; if [[ "$2" == ro ]]; then mount -o remount,bind,ro "/mnt/shared/$1"; fi' _ "$share_name" "$share_mode"
+				'mkdir -p "/mnt/shared/$1"; mountpoint -q "/mnt/shared/$1" || mount -t virtiofs "vm-vpn-$1" "/mnt/shared/$1"' _ "$share_name" "$share_mode"
 		done < <(jq -r '.[] | [.name, .mode] | @tsv' "$config")
 	fi
 }
