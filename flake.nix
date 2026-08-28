@@ -38,7 +38,12 @@
       linuxSystem = "aarch64-linux";
       darwinPkgs = import nixpkgs {
         system = darwinSystem;
-        config.allowUnfreePredicate = package: nixpkgs.lib.getName package == "tart";
+        config.allowUnfreePredicate =
+          package:
+          builtins.elem (nixpkgs.lib.getName package) [
+            "packer"
+            "tart"
+          ];
       };
       linuxPkgs = nixpkgs.legacyPackages.${linuxSystem};
       awsVpnClient = linuxPkgs.callPackage ./packages/aws-vpn-client.nix {
@@ -165,6 +170,7 @@
           darwinPkgs.nixfmt
           darwinPkgs.openssh
           darwinPkgs.openssl
+          darwinPkgs.packer
           darwinPkgs.ripgrep
           darwinPkgs.shellcheck
           darwinPkgs.shfmt

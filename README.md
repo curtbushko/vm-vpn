@@ -16,6 +16,29 @@ modifier, so Command+Space, Command+Return, Command+B, and Command+L invoke the
 same shortcuts shown as `Super` inside Linux. Clipboard sharing is enabled for
 copy and paste between macOS and every VM.
 
+## Minimal macOS image
+
+The experimental macOS path builds a reusable Tart image with Packer while
+keeping every host-side build tool in the Nix development shell. The image
+installs Firefox, Ghostty, Neovim, and Dock configuration tooling. Safari stays
+available. Protected Apple applications such as Calendar remain installed on
+the signed system volume but are omitted from the minimal workspace Dock; SIP
+and authenticated-root protection remain enabled.
+
+Initialize the Packer plugin and build from the repository root:
+
+```console
+nix develop -c packer init macos/packer
+nix develop -c packer build \
+  -var 'base_vm=ghcr.io/cirruslabs/macos-sequoia-base:latest' \
+  -var 'vm_name=vm-vpn-macos-base' \
+  macos/packer/vpn-workspace.pkr.hcl
+```
+
+The selected base image must provide Homebrew. The Packer result is a stopped
+local Tart VM named by `vm_name`; clone that golden image before using it for a
+workspace.
+
 The dock's **AWS VPN client** button opens a floating Ghostty window. The
 client reads `/run/vpn-workspace/vpn/profile.ovpn`, opens Firefox for AWS SAML
 sign-in, and then passes the returned one-time credentials to its patched

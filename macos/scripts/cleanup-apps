@@ -1,0 +1,67 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+if ! command -v brew >/dev/null 2>&1; then
+	printf 'cleanup-apps: Homebrew is required\n' >&2
+	exit 1
+fi
+if ! command -v dockutil >/dev/null 2>&1; then
+	printf 'cleanup-apps: dockutil is required\n' >&2
+	exit 1
+fi
+if ! command -v killall >/dev/null 2>&1; then
+	printf 'cleanup-apps: killall is required\n' >&2
+	exit 1
+fi
+
+# These protected Apple applications stay on the signed system volume. Keeping
+# them out of the Dock provides a focused workspace without weakening SIP.
+readonly -a protected_apps=(
+	Calendar
+	Contacts
+	FaceTime
+	Freeform
+	Home
+	Mail
+	Maps
+	Messages
+	Music
+	News
+	Notes
+	Photos
+	Podcasts
+	Reminders
+	Stocks
+	TV
+	Weather
+)
+readonly -a dock_apps=(
+	"/Applications/Safari.app"
+	"/Applications/Firefox.app"
+	"/Applications/Ghostty.app"
+	"/Applications/AWS VPN Client/AWS VPN Client.app"
+)
+
+# The base image may already contain Homebrew casks. Retain only applications
+# used by the VPN workspace; command-line formulae such as Neovim are separate.
+while IFS= read -r cask; do
+	case "$cask" in
+	firefox | ghostty | aws-vpn-client)
+		continue
+		;;
+	esac
+	brew uninstall --cask --force "$cask"
+done < <(brew list --cask)
+
+dockutil --remove all --no-restart
+for app in "${dock_apps[@]}"; do
+	if [[ -d "$app" ]]; then
+		dockutil --add "$app" --no-restart
+	fi
+done
+killall Dock
+
+printf 'cleanup-apps: kept protected applications installed but hidden from the Dock:'
+printf ' %s' "${protected_apps[@]}"
+printf '\n'
