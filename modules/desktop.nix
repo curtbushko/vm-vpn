@@ -1,5 +1,5 @@
 {
-  openawsVpnClient,
+  awsVpnClient,
   pkgs,
   workspace,
   ...
@@ -94,8 +94,8 @@
     })
 
     hl.window_rule({
-      name = "openaws-vpn-client-float",
-      match = { class = "openaws-vpn-client" },
+      name = "aws-vpn-client-float",
+      match = { class = "vm-vpn-aws-client" },
       float = true,
       center = true,
     })
@@ -347,8 +347,8 @@
             Rectangle {
               Layout.preferredWidth: 138; Layout.preferredHeight: 46; radius: 12
               color: vpnMouse.containsMouse ? "#3f384a" : "transparent"
-              Text { anchors.centerIn: parent; text: "󰖂  Open VPN client"; color: "#ffffff"; font.family: "JetBrainsMono Nerd Font"; font.pixelSize: 13 }
-              MouseArea { id: vpnMouse; anchors.fill: parent; hoverEnabled: true; onClicked: Quickshell.execDetached(["${pkgs.bash}/bin/bash", "-lc", "${pkgs.procps}/bin/pkill -u $UID -f '^openaws-vpn-client$' 2>/dev/null || true; exec ${openawsVpnClient}/bin/openaws-vpn-client"]) }
+              Text { anchors.centerIn: parent; text: "󰖂  AWS VPN client"; color: "#ffffff"; font.family: "JetBrainsMono Nerd Font"; font.pixelSize: 13 }
+              MouseArea { id: vpnMouse; anchors.fill: parent; hoverEnabled: true; onClicked: Quickshell.execDetached(["${pkgs.ghostty}/bin/ghostty", "--class=vm-vpn-aws-client", "--title=AWS VPN Client", "-e", "${awsVpnClient}/bin/aws-vpn-connect"]) }
             }
           }
         }

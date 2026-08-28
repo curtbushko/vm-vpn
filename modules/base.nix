@@ -10,7 +10,9 @@
   boot.loader.efi.canTouchEfiVariables = false;
 
   networking.networkmanager.enable = true;
+  networking.networkmanager.dns = "systemd-resolved";
   networking.firewall.enable = true;
+  services.resolved.enable = true;
 
   time.timeZone = "America/Toronto";
   services.chrony.enable = true;

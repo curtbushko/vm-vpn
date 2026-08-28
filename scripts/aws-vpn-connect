@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+profile="${AWS_VPN_PROFILE:-/run/vpn-workspace/vpn/profile.ovpn}"
+client_bin="${AWS_VPN_CLIENT_BIN:-@awsVpnClient@/bin/aws-vpn-client}"
+openvpn_bin="${AWS_VPN_OPENVPN_BIN:-@openvpnPatched@/bin/openvpn}"
+sudo_bin="${AWS_VPN_SUDO_BIN:-@sudo@/bin/sudo}"
+dns_script="${AWS_VPN_DNS_SCRIPT:-@updateSystemdResolved@/libexec/openvpn/update-systemd-resolved}"
+runtime_base="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+
+if [[ ! -f "${profile}" ]]; then
+	printf 'VPN profile not found: %s\n' "${profile}" >&2
+	exit 1
+fi
+
+mkdir -p "${runtime_base}"
+runtime_dir="$(mktemp -d "${runtime_base}/aws-vpn-client.XXXXXX")"
+credentials="${runtime_dir}/credentials"
+client_log="${runtime_dir}/client.log"
+runtime_profile="${runtime_dir}/profile.ovpn"
+chmod 700 "${runtime_dir}"
+
+cleanup() {
+	if [[ -f "${credentials}" ]]; then
+		: >"${credentials}"
+	fi
+	mkdir -p "${runtime_base}/.trash"
+	chmod 700 "${runtime_base}/.trash"
+	mv "${runtime_dir}" "${runtime_base}/.trash/aws-vpn-client.$$.${RANDOM}" 2>/dev/null || true
+}
+trap cleanup EXIT
+
+sed -E \
+	-e '/^[[:space:]]*auth-user-pass([[:space:]]*#.*)?$/d' \
+	-e '/^[[:space:]]*auth-retry[[:space:]]+interact([[:space:]]*#.*)?$/d' \
+	"${profile}" >"${runtime_profile}"
+chmod 600 "${runtime_profile}"
+
+printf 'Opening AWS sign-in in Firefox. Complete authentication in the browser.\n'
+umask 077
+"${client_bin}" \
+	-ovpn "${openvpn_bin}" \
+	-config "${runtime_profile}" \
+	-verbose \
+	>"${credentials}" \
+	2> >(tee "${client_log}" >&2)
+
+remote_ip="$(awk '/Remote IP:/ { print $NF; exit }' "${client_log}")"
+if [[ -z "${remote_ip}" ]]; then
+	printf 'AWS VPN client did not resolve a remote VPN address.\n' >&2
+	exit 1
+fi
+
+chmod 600 "${credentials}"
+printf 'Authentication complete. Connecting to %s. Press Ctrl+C to disconnect.\n' "${remote_ip}"
+"${sudo_bin}" "${openvpn_bin}" \
+	--config "${runtime_profile}" \
+	--remote "${remote_ip}" 443 \
+	--script-security 2 \
+	--up "${dns_script}" \
+	--up-restart \
+	--down "${dns_script}" \
+	--down-pre \
+	--auth-user-pass "${credentials}"

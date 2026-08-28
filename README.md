@@ -6,7 +6,7 @@ the initial workspace is `demo/dev`. The VM name is
 `<product>-<environment>`.
 
 The guest provides Hyprland, Quickshell, Firefox, Ghostty, Neovim, Starship,
-and the native ARM64 `openaws-vpn-client`. It does not use Rosetta. Press
+and the native ARM64 `ethan605/aws-vpn-client`. It does not use Rosetta. Press
 Super+B for Firefox, Super+Return for Ghostty, and Super+L to lock. Click
 **Applications** in the top menu bar or press Super+Space to search installed
 graphical applications. The bottom dock directly launches Firefox, Ghostty,
@@ -15,6 +15,13 @@ rather than the graphical menus. The Mac Command key is Hyprland's main
 modifier, so Command+Space, Command+Return, Command+B, and Command+L invoke the
 same shortcuts shown as `Super` inside Linux. Clipboard sharing is enabled for
 copy and paste between macOS and every VM.
+
+The dock's **AWS VPN client** button opens a floating Ghostty window. The
+client reads `/run/vpn-workspace/vpn/profile.ovpn`, opens Firefox for AWS SAML
+sign-in, and then passes the returned one-time credentials to its patched
+OpenVPN 2.6.3 process. Close the terminal or press Ctrl+C to disconnect. The
+real SAML, DNS, routes, and internal-resource checks are deferred until a real
+profile is supplied.
 
 ## Setup
 

@@ -11,11 +11,12 @@ refuse collisions. Nothing beneath that root is a flake input.
 
 `vm materialize` streams a tar archive over Tart guest-agent stdin. Contents do
 not appear in process arguments or routine logs. The guest extracts into
-tmpfs-backed `/run/vpn-workspace`, creates the openaws client selection there,
-generates an escaped runtime start page, and imports runtime CA certificates
-into an existing Firefox NSS profile. The directory disappears at shutdown.
-The openaws package redirects its generated data/configuration into the same
-runtime root and removes upstream endpoint logging.
+tmpfs-backed `/run/vpn-workspace`, generates an escaped runtime start page, and
+imports runtime CA certificates into an existing Firefox NSS profile. The
+directory disappears at shutdown. The AWS VPN wrapper creates its sanitized
+profile, SAML credentials, and client log beneath the user's runtime directory;
+it truncates the credentials and moves the temporary directory beneath the
+runtime `.trash/` after disconnect.
 
 Persistent browser state is sensitive even though it is not reproducible. VM
 disk backups must therefore receive the same protection as the source profile.

@@ -8,9 +8,9 @@ let
   firefoxPolicyBase = system.environment.etc."vm-vpn/firefox-policies-base.json".text;
   firefoxThemeManifest = system.environment.etc."vm-vpn/firefox-theme-manifest.json".text;
   packageNames = map (package: package.pname or package.name) system.environment.systemPackages;
-  openawsPackage = builtins.head (
+  awsVpnPackage = builtins.head (
     builtins.filter (
-      package: (package.pname or "") == "openaws-vpn-client"
+      package: (package.pname or "") == "aws-vpn-client"
     ) system.environment.systemPackages
   );
   shellPackageNames = map (
@@ -23,6 +23,8 @@ assert workspace.vmName == "demo-dev";
 assert workspace.vmPath == "demo/dev";
 assert system.networking.hostName == "demo-dev";
 assert system.programs.hyprland.enable;
+assert system.services.resolved.enable;
+assert system.networking.networkmanager.dns == "systemd-resolved";
 assert
   builtins.match ".*start-hyprland.*" system.services.greetd.settings.initial_session.command != null;
 assert
@@ -58,16 +60,13 @@ assert system.programs.starship.presets == [ "catppuccin-powerline" ];
 assert system.programs.starship.settings == { };
 assert builtins.elem "quickshell" packageNames;
 assert builtins.elem "fuzzel" packageNames;
-assert builtins.elem "openaws-vpn-client" packageNames;
-assert builtins.match ".*ApplicationFlags::NON_UNIQUE.*" openawsPackage.drvAttrs.postPatch != null;
-assert builtins.match ".*connect_startup.*" openawsPackage.drvAttrs.postPatch == null;
+assert builtins.elem "aws-vpn-client" packageNames;
+assert awsVpnPackage.drvAttrs.patchedOpenvpnVersion == "2.6.3-aws";
+assert builtins.match ".*BUF_SIZE_MAX 1 << 21.*" awsVpnPackage.drvAttrs.patchesText != null;
+assert builtins.match ".*aws-vpn-connect.*" awsVpnPackage.drvAttrs.postInstall != null;
 assert
-  builtins.match ".*app[.]register.*app[.]activate.*app[.]run.*" openawsPackage.drvAttrs.postPatch
+  builtins.match ".*/run/vpn-workspace/vpn/profile[.]ovpn.*" awsVpnPackage.drvAttrs.connectScript
   != null;
-assert builtins.match ".*HeaderBar.*show_close_button.*" openawsPackage.drvAttrs.postPatch != null;
-assert builtins.match ".*default_width[(]720[)].*" openawsPackage.drvAttrs.postPatch != null;
-assert builtins.match ".*default_height[(]520[)].*" openawsPackage.drvAttrs.postPatch != null;
-assert builtins.match ".*GTK_CSD.*1.*" openawsPackage.drvAttrs.postInstall != null;
 assert builtins.match ".*local mainMod = \"SUPER\".*" hyprlandConfig != null;
 assert
   builtins.match ".*hl[.]bind[(]mainMod [.][.] \" [+] SPACE\".*fuzzel.*" hyprlandConfig != null;
@@ -75,35 +74,36 @@ assert builtins.match ".*[[][=][[].*start[.]html.*[]][=][]].*" hyprlandConfig !=
 assert builtins.match ".*Applications.*" quickshellConfig != null;
 assert builtins.match ".*Firefox.*" quickshellConfig != null;
 assert builtins.match ".*Ghostty.*" quickshellConfig != null;
-assert builtins.match ".*Open VPN client.*" quickshellConfig != null;
+assert builtins.match ".*AWS VPN client.*" quickshellConfig != null;
 assert builtins.match ".*Neovim.*" quickshellConfig == null;
 assert builtins.match ".*color: \"#25212f\".*" quickshellConfig != null;
 assert builtins.match ".*Quickshell.Services.SystemClock.*" quickshellConfig == null;
 assert builtins.match ".*clockText.*" quickshellConfig != null;
 assert builtins.match ".*Quickshell[.]execDetached.*firefox.*" quickshellConfig != null;
 assert builtins.match ".*Quickshell[.]execDetached.*ghostty.*" quickshellConfig != null;
-assert builtins.match ".*Quickshell[.]execDetached.*openaws-vpn-client.*" quickshellConfig != null;
-assert builtins.match ".*pkill.*openaws-vpn-client.*" quickshellConfig != null;
-assert builtins.match ".*pkill -u [$]UID -f.*" quickshellConfig != null;
+assert
+  builtins.match ".*Quickshell[.]execDetached.*ghostty.*aws-vpn-connect.*" quickshellConfig != null;
+assert builtins.match ".*vm-vpn-aws-client.*" quickshellConfig != null;
 assert builtins.match ".*firefoxLauncher[.]running.*" quickshellConfig == null;
 assert system.environment.sessionVariables.XCURSOR_THEME == "Adwaita";
 assert system.environment.sessionVariables.XCURSOR_SIZE == "24";
 assert builtins.match ".*setcursor Adwaita 24.*" hyprlandConfig != null;
 assert
-  builtins.match ".*hl[.]window_rule.*class = \"openaws-vpn-client\".*float = true.*" hyprlandConfig
+  builtins.match ".*hl[.]window_rule.*class = \"vm-vpn-aws-client\".*float = true.*" hyprlandConfig
   != null;
 assert builtins.match ".*property int activeWorkspace.*" quickshellConfig != null;
 assert builtins.match ".*model: 4.*" quickshellConfig != null;
 assert builtins.match ".*hl[.]dsp[.]focus.*workspace.*index [+] 1.*" quickshellConfig != null;
 assert builtins.match ".*for workspaceId = 1, 4 do.*hl[.]dsp[.]focus.*" hyprlandConfig != null;
 assert
-  flake.packages.aarch64-linux.openaws-vpn-client == builtins.head (
+  flake.packages.aarch64-linux.aws-vpn-client == builtins.head (
     builtins.filter (
-      package: (package.pname or "") == "openaws-vpn-client"
+      package: (package.pname or "") == "aws-vpn-client"
     ) system.environment.systemPackages
   );
 assert builtins.elem "curl" shellPackageNames;
 assert builtins.elem "direnv" shellPackageNames;
+assert builtins.elem "go" shellPackageNames;
 assert builtins.elem "openssh" shellPackageNames;
 assert builtins.elem "tart" shellPackageNames;
 assert builtins.elem "daemonize" shellPackageNames;

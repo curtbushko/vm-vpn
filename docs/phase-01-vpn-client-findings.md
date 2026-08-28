@@ -3,18 +3,18 @@
 ## Result
 
 The selected mechanism is the unofficial, open-source
-`openaws-vpn-client`, pinned at revision
-`a65966be4a44682c7a2c88cc9672645604bad0bf`. Its upstream legacy Nix build no
-longer works, so this repository builds the pinned source with current pinned
-Nixpkgs and the compatible AWS-patched OpenVPN 2.5.1. Both build natively for
+`ethan605/aws-vpn-client`, pinned at revision
+`fc27bc5de33c4ebbb2d5f7c4a6f220d734cb9666`. This repository builds the pinned
+Go source with current pinned Nixpkgs and its AWS patch for OpenVPN 2.6.3. Both build natively for
 `aarch64-linux`; Rosetta is not configured or used.
 
-The package removes upstream remote-endpoint prints and redirects generated
-client data/configuration to `/run/vpn-workspace`. The host CLI streams
-local-only files over Tart guest-agent stdin into that tmpfs-backed directory
-and preselects `/run/vpn-workspace/vpn/profile.ovpn`; profile contents are not
-placed in command arguments. Real-profile SAML, DNS, routing, and internal
-reachability remain interactive acceptance checks.
+The host CLI streams local-only files over Tart guest-agent stdin into the
+tmpfs-backed `/run/vpn-workspace` directory. A floating terminal runs a wrapper
+which sanitizes conflicting password directives, invokes the client to open the
+AWS SAML URL in Firefox, and passes the returned credentials to patched
+OpenVPN. Profile contents and SAML credentials are not placed in command
+arguments. Real-profile SAML, DNS, routing, and internal reachability remain
+interactive acceptance checks.
 
 Testing the
 same profile with ordinary OpenVPN on macOS produced a username/password prompt,
@@ -71,8 +71,8 @@ remain only to prevent the rejected path from being repeated.
   or address must remain outside Git and the Nix store.
 - A newly exported endpoint profile should be checked for `auth-federate`, but
   the profile must remain outside Git and the Nix store.
-- A supported ARM64 Linux client path, or explicit approval for an unofficial
-  reverse-engineered SAML client.
+- Acceptance of the explicitly selected unofficial reverse-engineered SAML
+  client for this workspace.
 
 ## Official references
 

@@ -1,5 +1,21 @@
 {
   "nodes": {
+    "aws-vpn-client": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1683104131,
+        "narHash": "sha256-Tlfu2TCy5hFerMZB+46TvKM0yGbanJ1Ayk++Vj5LyvI=",
+        "owner": "ethan605",
+        "repo": "aws-vpn-client",
+        "rev": "fc27bc5de33c4ebbb2d5f7c4a6f220d734cb9666",
+        "type": "github"
+      },
+      "original": {
+        "owner": "ethan605",
+        "repo": "aws-vpn-client",
+        "type": "github"
+      }
+    },
     "nixpkgs": {
       "locked": {
         "lastModified": 1787736819,
@@ -16,26 +32,10 @@
         "type": "github"
       }
     },
-    "openaws-vpn-client": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1742343225,
-        "narHash": "sha256-TwtfAZ53fRA7LXRU/tfQdpccBq+6KAC/7GCpzHtiYFE=",
-        "owner": "jhrldev",
-        "repo": "openaws-vpn-client",
-        "rev": "a65966be4a44682c7a2c88cc9672645604bad0bf",
-        "type": "github"
-      },
-      "original": {
-        "owner": "jhrldev",
-        "repo": "openaws-vpn-client",
-        "type": "github"
-      }
-    },
     "root": {
       "inputs": {
-        "nixpkgs": "nixpkgs",
-        "openaws-vpn-client": "openaws-vpn-client"
+        "aws-vpn-client": "aws-vpn-client",
+        "nixpkgs": "nixpkgs"
       }
     }
   },

@@ -1,5 +1,5 @@
 {
-  openawsVpnClient,
+  awsVpnClient,
   lib,
   pkgs,
   workspace,
@@ -90,7 +90,7 @@ in
   fonts.packages = [ pkgs.nerd-fonts.jetbrains-mono ];
 
   environment.systemPackages = [
-    openawsVpnClient
+    awsVpnClient
     pkgs.firefox
     pkgs.ghostty
     pkgs.neovim

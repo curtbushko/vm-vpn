@@ -132,6 +132,7 @@ EOF
 	grep -q 'firefox-policies.json' "${TART_LOG}"
 	grep -q 'Placement.*toolbar' "${TART_LOG}"
 	grep -q 'firefox-policies-base.json' "${TART_LOG}"
+	! grep -q 'openaws-vpn-client' "${TART_LOG}"
 	grep -q 'chown -R vpn:users /run/vpn-workspace' "${TART_LOG}"
 	! grep -q "${canary}" "${TART_LOG}"
 }

@@ -50,7 +50,7 @@ Synthetic fixtures and fake Tart contracts pass, but they do not establish the
 following external facts:
 
 1. AWS browser SAML completes with the selected test endpoint.
-2. `openaws-vpn-client` connects with the organization's current profile.
+2. `ethan605/aws-vpn-client` connects with the organization's current profile.
 3. VPN-provided DNS and routes work inside each guest.
 4. An approved internal hostname/URL is reachable with required certificates.
 5. macOS DNS/routes remain byte-for-byte unchanged during one or two connected

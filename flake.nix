@@ -2,8 +2,8 @@
   description = "Declarative NixOS VPN workspace VMs on Tart";
 
   inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-  inputs.openaws-vpn-client = {
-    url = "github:jhrldev/openaws-vpn-client";
+  inputs.aws-vpn-client = {
+    url = "github:ethan605/aws-vpn-client";
     flake = false;
   };
 
@@ -11,7 +11,7 @@
     {
       self,
       nixpkgs,
-      openaws-vpn-client,
+      aws-vpn-client,
     }:
     let
       workspaceFactory = import ./lib/mkWorkspace.nix;
@@ -41,8 +41,8 @@
         config.allowUnfreePredicate = package: nixpkgs.lib.getName package == "tart";
       };
       linuxPkgs = nixpkgs.legacyPackages.${linuxSystem};
-      openawsVpnClient = linuxPkgs.callPackage ./packages/openaws-vpn-client.nix {
-        src = openaws-vpn-client;
+      awsVpnClient = linuxPkgs.callPackage ./packages/aws-vpn-client.nix {
+        src = aws-vpn-client;
       };
       tart = darwinPkgs.callPackage ./packages/tart.nix { };
       vm = darwinPkgs.writeShellApplication {
@@ -71,7 +71,7 @@
         nixpkgs.lib.nixosSystem {
           system = linuxSystem;
           specialArgs = {
-            inherit openawsVpnClient;
+            inherit awsVpnClient;
             workspace = resolvedWorkspace;
           };
           modules = [ ./systems/demo-dev.nix ];
@@ -121,7 +121,7 @@
       };
 
       packages.${linuxSystem} = {
-        openaws-vpn-client = openawsVpnClient;
+        aws-vpn-client = awsVpnClient;
         tart-guest-agent =
           nixpkgs.legacyPackages.${linuxSystem}.callPackage ./packages/tart-guest-agent.nix
             { };
@@ -160,6 +160,7 @@
           darwinPkgs.gawk
           darwinPkgs.gnutar
           darwinPkgs.git
+          darwinPkgs.go
           darwinPkgs.jq
           darwinPkgs.nixfmt
           darwinPkgs.openssh
