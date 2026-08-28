@@ -65,7 +65,7 @@ remain only to prevent the rejected path from being repeated.
 ## Inputs still required
 
 - A real profile at the local-only path
-  `~/.local/share/vm-vpn/vault/dev/vpn/profile.ovpn` (or an explicitly supplied
+  `~/.local/share/vm-vpn/demo/dev/vpn/profile.ovpn` (or an explicitly supplied
   equivalent path).
 - An approved internal resource used only for a reachability assertion. Its URL
   or address must remain outside Git and the Nix store.
@@ -88,7 +88,7 @@ remain only to prevent the rejected path from being repeated.
 1. Enter `nix develop` and run `vm doctor`.
 2. Confirm the profile exists and inspect only its permissions and directive
    names; never print its certificates, keys, endpoint, or SAML data into logs.
-3. Record host route and DNS hashes while `vault-dev` is running but before the
+3. Record host route and DNS hashes while `demo-dev` is running but before the
    VPN connection.
 4. Implement the approved client mechanism test-first, inject the profile only
    into a non-store guest runtime path, and complete SAML interactively.

@@ -2,7 +2,7 @@
 
 ## Objective
 
-Generalize only after `vault/dev` is stable, then prove approximately ten configurations remain manageable and at least two overlapping VPN workspaces can run concurrently.
+Generalize only after `demo/dev` is stable, then prove approximately ten configurations remain manageable and at least two overlapping VPN workspaces can run concurrently.
 
 ## Tasks
 

@@ -17,9 +17,9 @@
       workspaceFactory = import ./lib/mkWorkspace.nix;
       workspaces = [
         (workspaceFactory.make {
-          productName = "vault";
+          productName = "demo";
           environmentName = "dev";
-          workspace = import ./workspaces/vault/dev.nix;
+          workspace = import ./workspaces/demo/dev.nix;
         })
         (workspaceFactory.make {
           productName = "consul";
@@ -28,7 +28,7 @@
         })
       ];
       workspaceRegistry = workspaceFactory.registry workspaces;
-      workspace = workspaceRegistry."vault/dev";
+      workspace = workspaceRegistry."demo/dev";
       workspaceMatrix = builtins.genList (index: {
         product = "matrix-${toString (index / 2)}";
         environment = "fixture-${toString (index - (index / 2 * 2))}";
@@ -58,6 +58,7 @@
           darwinPkgs.jq
           darwinPkgs.nix
           darwinPkgs.nixfmt
+          darwinPkgs.openssl
           darwinPkgs.ripgrep
           darwinPkgs.shellcheck
           darwinPkgs.shfmt
@@ -73,7 +74,7 @@
             inherit openawsVpnClient;
             workspace = resolvedWorkspace;
           };
-          modules = [ ./systems/vault-dev.nix ];
+          modules = [ ./systems/demo-dev.nix ];
         };
       workspaceSystems = builtins.listToAttrs (
         map (resolvedWorkspace: {
@@ -81,8 +82,8 @@
           value = makeSystem resolvedWorkspace;
         }) workspaces
       );
-      vaultDev = workspaceSystems.vault-dev;
-      vaultDevInstaller = nixpkgs.lib.nixosSystem {
+      demoDev = workspaceSystems.demo-dev;
+      demoDevInstaller = nixpkgs.lib.nixosSystem {
         system = linuxSystem;
         specialArgs = { inherit workspace; };
         modules = [
@@ -92,7 +93,7 @@
       };
       requiredPackages =
         let
-          config = vaultDev.config;
+          config = demoDev.config;
           names = map (package: package.pname or package.name) config.environment.systemPackages;
         in
         assert config.networking.hostName == workspace.vmName;
@@ -111,7 +112,7 @@
       inherit workspace workspaceMatrix workspaceRegistry;
 
       nixosConfigurations = workspaceSystems // {
-        vault-dev-installer = vaultDevInstaller;
+        demo-dev-installer = demoDevInstaller;
       };
 
       packages.${darwinSystem} = {
@@ -124,7 +125,7 @@
         tart-guest-agent =
           nixpkgs.legacyPackages.${linuxSystem}.callPackage ./packages/tart-guest-agent.nix
             { };
-        vault-dev-installer = vaultDevInstaller.config.system.build.isoImage;
+        demo-dev-installer = demoDevInstaller.config.system.build.isoImage;
       };
 
       apps.${darwinSystem}.default = {
@@ -139,8 +140,8 @@
             touch "$out"
           '';
         identity-evaluation =
-          assert workspaceRegistry."vault/dev".vmName == "vault-dev";
-          assert vaultDev.config.networking.hostName == workspace.vmName;
+          assert workspaceRegistry."demo/dev".vmName == "demo-dev";
+          assert demoDev.config.networking.hostName == workspace.vmName;
           darwinPkgs.runCommand "identity-evaluation" { } ''
             touch "$out"
           '';
@@ -161,6 +162,7 @@
           darwinPkgs.nixfmt
           darwinPkgs.nix
           darwinPkgs.openssh
+          darwinPkgs.openssl
           darwinPkgs.ripgrep
           darwinPkgs.shellcheck
           darwinPkgs.shfmt

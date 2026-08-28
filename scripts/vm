@@ -8,6 +8,7 @@ Usage:
   vm --help
   vm identity PRODUCT ENVIRONMENT
   vm init PRODUCT ENVIRONMENT
+  vm seed PRODUCT ENVIRONMENT
   vm import-vpn PRODUCT ENVIRONMENT SOURCE
   vm import-bookmarks PRODUCT ENVIRONMENT SOURCE
   vm import-cert PRODUCT ENVIRONMENT SOURCE
@@ -54,6 +55,60 @@ init_workspace() {
 	mkdir -p "$root/vpn" "$root/bookmarks" "$root/certs"
 	chmod 0700 "$root" "$root/vpn" "$root/bookmarks" "$root/certs"
 	printf 'initialized %s/%s\n' "$1" "$2"
+}
+
+seed_workspace() {
+	local product="$1" environment="$2" repository fixture root output config
+	validate_workspace "$product" "$environment"
+	repository="${VM_VPN_REPO_ROOT:-$PWD}"
+	fixture="$repository/examples/$product/$environment"
+	[[ -f "$fixture/vpn/profile.ovpn" ]] || fail "seed fixtures are not available for $product/$environment"
+	[[ -f "$fixture/bookmarks/bookmarks.json" ]] || fail "seed bookmark fixture is missing"
+	[[ -f "$fixture/certs/demo-ca.crt" ]] || fail "seed certificate fixture is missing"
+
+	init_workspace "$product" "$environment" >/dev/null
+	root="$(workspace_dir "$product" "$environment")"
+	output="$root/output"
+	umask 077
+	mkdir -p "$output"
+	chmod 0700 "$output"
+
+	local source destination
+	for source in \
+		"$fixture/vpn/profile.ovpn" \
+		"$fixture/bookmarks/bookmarks.json" \
+		"$fixture/certs/demo-ca.crt"; do
+		case "$source" in
+		*/vpn/*) destination="$root/vpn/profile.ovpn" ;;
+		*/bookmarks/*) destination="$root/bookmarks/bookmarks.json" ;;
+		*/certs/*) destination="$root/certs/demo-ca.crt" ;;
+		esac
+		if [[ -f "$destination" ]]; then
+			cmp -s "$source" "$destination" || fail "seed destination already contains different data"
+		else
+			cp "$source" "$destination"
+		fi
+		chmod 0600 "$destination"
+	done
+
+	config="$(share_config_file "$product" "$environment")"
+	seed_share "$product" "$environment" examples "$fixture/shared" ro "$config"
+	seed_share "$product" "$environment" output "$output" rw "$config"
+	printf 'seeded example workspace %s/%s\n' "$product" "$environment"
+}
+
+seed_share() {
+	local product="$1" environment="$2" name="$3" path="$4" mode="$5" config="$6"
+	path="$(realpath "$path")"
+	if [[ -f "$config" ]] && jq -e --arg name "$name" 'any(.[]; .name == $name)' "$config" >/dev/null; then
+		jq -e --arg name "$name" --arg path "$path" --arg mode "$mode" \
+			'any(.[]; .name == $name and .path == $path and .mode == $mode)' "$config" >/dev/null ||
+			fail "seed share $name already has different settings"
+	elif [[ "$mode" == "rw" ]]; then
+		share_add "$product" "$environment" "$name" "$path" --read-write >/dev/null
+	else
+		share_add "$product" "$environment" "$name" "$path" >/dev/null
+	fi
 }
 
 import_file() {
@@ -201,7 +256,7 @@ vm_create() {
 	(tart_command run "$name" --no-graphics --disk "$iso:ro" --dir "repo:$snapshot" >>"$state_root/installer.log" 2>&1 &)
 	for _ in {1..60}; do
 		if tart_command exec "$name" /run/current-system/sw/bin/bash -lc \
-			'install -d -m 0700 /run/vm-vpn-host; mountpoint -q /run/vm-vpn-host || mount -t virtiofs com.apple.virtio-fs.automount /run/vm-vpn-host; mkdir -p /mnt/shared/repo; mountpoint -q /mnt/shared/repo || mount --bind /run/vm-vpn-host/repo /mnt/shared/repo; mount -o remount,bind,ro /mnt/shared/repo; /mnt/shared/repo/scripts/install-vault-dev --device /dev/vda --repo /mnt/shared/repo --yes'; then
+			'install -d -m 0700 /run/vm-vpn-host; mountpoint -q /run/vm-vpn-host || mount -t virtiofs com.apple.virtio-fs.automount /run/vm-vpn-host; mkdir -p /mnt/shared/repo; mountpoint -q /mnt/shared/repo || mount --bind /run/vm-vpn-host/repo /mnt/shared/repo; mount -o remount,bind,ro /mnt/shared/repo; /mnt/shared/repo/scripts/install-demo-dev --device /dev/vda --repo /mnt/shared/repo --yes'; then
 			tart_command stop "$name"
 			printf 'created %s\n' "$name"
 			return 0
@@ -285,7 +340,7 @@ vm_rebuild() {
 	wait_for_shares "$1" "$2"
 	for _ in {1..30}; do
 		if tart_command exec "$name" /run/current-system/sw/bin/bash -lc \
-			'nixos-rebuild switch --flake /mnt/shared/repo#vault-dev'; then
+			'nixos-rebuild switch --flake /mnt/shared/repo#demo-dev'; then
 			printf 'rebuilt %s\n' "$name"
 			return 0
 		fi
@@ -418,6 +473,11 @@ main() {
 		shift
 		[[ "$#" -eq 2 ]] || fail "init requires PRODUCT and ENVIRONMENT"
 		init_workspace "$@"
+		;;
+	seed)
+		shift
+		[[ "$#" -eq 2 ]] || fail "seed requires PRODUCT and ENVIRONMENT"
+		seed_workspace "$@"
 		;;
 	import-vpn | import-bookmarks | import-cert)
 		local command="$1"

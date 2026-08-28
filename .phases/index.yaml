@@ -3,8 +3,8 @@ design: "../VPN_WORKSPACE_VM_DESIGN.md"
 current_phase: 6
 phases:
   - id: 1
-    name: "Vault Dev Vertical Slice"
-    file: "phase-01-vault-dev-vertical-slice.md"
+    name: "Demo Dev Vertical Slice"
+    file: "phase-01-demo-dev-vertical-slice.md"
     status: complete
     progress: "20/20"
   - id: 2

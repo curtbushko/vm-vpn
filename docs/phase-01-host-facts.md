@@ -19,7 +19,7 @@ Captured on 2026-08-27 before changing host routing or DNS.
 
 Use an ARM64 Linux bootstrap image under Tart to obtain a working
 `aarch64-linux` Nix builder. Build a NixOS ARM64 installer ISO through that
-builder, then install it into the persistent `vault-dev` Tart VM.
+builder, then install it into the persistent `demo-dev` Tart VM.
 
 The development shell will pin and expose Tart rather than relying on the
 initial host `PATH` or Homebrew.

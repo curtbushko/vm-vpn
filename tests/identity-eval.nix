@@ -2,15 +2,15 @@ let
   flake = builtins.getFlake (toString ./..);
   identity = import ../lib/identity.nix;
   mkWorkspace = import ../lib/mkWorkspace.nix;
-  resolved = flake.workspaceRegistry."vault/dev";
+  resolved = flake.workspaceRegistry."demo/dev";
   second = flake.workspaceRegistry."consul/lab";
   invalid = builtins.tryEval (
     identity.resolve {
-      productName = "Vault!";
+      productName = "Demo!";
       environmentName = "dev";
-      product = import ../products/vault.nix;
+      product = import ../products/demo.nix;
       environment = import ../environments/dev.nix;
-      workspace = import ../workspaces/vault/dev.nix;
+      workspace = import ../workspaces/demo/dev.nix;
     }
   );
   missing = builtins.tryEval (
@@ -30,11 +30,11 @@ let
   );
   system = flake.nixosConfigurations.${resolved.vmName}.config;
 in
-assert resolved.product == "vault";
+assert resolved.product == "demo";
 assert resolved.environment == "dev";
-assert resolved.vmName == "vault-dev";
-assert resolved.vmPath == "vault/dev";
-assert resolved.displayName == "Vault - Development";
+assert resolved.vmName == "demo-dev";
+assert resolved.vmPath == "demo/dev";
+assert resolved.displayName == "Demo - Development";
 assert resolved.productIcon != "";
 assert resolved.environmentIcon != "";
 assert second.vmName == "consul-lab";

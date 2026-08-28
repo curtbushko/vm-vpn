@@ -1,6 +1,6 @@
 # Multi-workspace Operation
 
-`vault/dev` and synthetic `consul/lab` prove that identity, NixOS evaluation,
+`demo/dev` and synthetic `consul/lab` prove that identity, NixOS evaluation,
 Tart names, local data, state, logs, source snapshots, and runtime
 materialization are keyed by `PRODUCT/ENVIRONMENT`. Registry validation prevents
 unknown or duplicate canonical names.

@@ -2,7 +2,7 @@
 
 Declarative graphical NixOS VPN workspaces running under Tart on Apple Silicon.
 Each workspace is identified by a lowercase `<product>` and `<environment>`;
-the initial workspace is `vault/dev`. The VM name is
+the initial workspace is `demo/dev`. The VM name is
 `<product>-<environment>`.
 
 The guest provides Hyprland, Quickshell, Firefox, Ghostty, Neovim, Starship,
@@ -25,13 +25,22 @@ required host tool.
 nix develop
 vm doctor
 vm list
-vm init <product> <environment>
-vm import-vpn <product> <environment> /absolute/path/to/profile.ovpn
-vm up <product> <environment>
+vm seed demo dev
+vm up demo dev
 ```
 
+`vm seed demo dev` creates a complete synthetic workspace using the tracked
+fixtures under `examples/demo/dev`. It installs a non-working example OpenVPN
+profile, a valid example CA certificate, and bookmarks for the
+[Vault documentation](https://developer.hashicorp.com/vault/docs),
+[AWS Client VPN guide](https://docs.aws.amazon.com/vpn/latest/clientvpn-user/what-is.html),
+[NixOS options](https://search.nixos.org/options), and
+[Hyprland documentation](https://wiki.hypr.land/). It also configures the
+tracked `examples` directory as read-only and creates a writable `output`
+directory. No real VPN credentials or private keys are included.
+
 `vm up` requires `VM_VPN_INSTALLER_ISO` only when the corresponding Tart VM
-does not exist. Build or export `.#vault-dev-installer` on an ARM64 Linux
+does not exist. Build or export `.#demo-dev-installer` on an ARM64 Linux
 builder, then set the variable to the resulting ISO path. Existing VMs do not
 need the ISO.
 
@@ -63,6 +72,7 @@ vm --help
 
 ```console
 vm init <product> <environment>
+vm seed <product> <environment>
 vm import-vpn <product> <environment> /absolute/path/to/profile.ovpn
 vm import-bookmarks <product> <environment> /absolute/path/to/bookmarks.json
 vm import-cert <product> <environment> /absolute/path/to/certificate
@@ -71,6 +81,8 @@ vm cleanup <product> <environment>
 ```
 
 - `init` creates the protected host data directories.
+- `seed` installs a workspace's tracked demonstration fixtures and settings;
+  fixtures currently exist for `demo/dev`.
 - Import commands copy their source, set mode `0600`, and refuse to overwrite
   an existing destination.
 - `materialize` streams the local data into guest tmpfs at

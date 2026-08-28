@@ -6,7 +6,7 @@ setup() {
 }
 
 @test "README documents the complete placeholder command interface" {
-	for command in identity init import-vpn import-bookmarks import-cert preflight materialize up down restart status rebuild diagnose cleanup share-add share-list share-remove; do
+	for command in identity init seed import-vpn import-bookmarks import-cert preflight materialize up down restart status rebuild diagnose cleanup share-add share-list share-remove; do
 		grep -q "vm ${command} <product> <environment>" "${README}"
 	done
 	grep -q '^vm list$' "${README}"

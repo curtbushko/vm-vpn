@@ -2,7 +2,7 @@
 
 ## Objective
 
-Turn the proven `vault/dev` mechanisms into a safe, repo-local lifecycle interface while keeping Tart-specific behavior behind a backend boundary.
+Turn the proven `demo/dev` mechanisms into a safe, repo-local lifecycle interface while keeping Tart-specific behavior behind a backend boundary.
 
 ## Tasks
 
@@ -10,13 +10,13 @@ Turn the proven `vault/dev` mechanisms into a safe, repo-local lifecycle interfa
 - [x] Write failing tests for argument validation, positional-versus-environment behavior, invalid workspaces, and safe error messages.
 - [x] Isolate Tart operations behind a backend interface for exists, create, start, stop, status, share, and present.
 - [x] Write backend contract tests using a fake Tart executable before connecting commands to real Tart.
-- [x] Implement `vm up vault dev` with validation, preflight, deterministic VM lookup/creation, runtime materialization, start, and graphical presentation.
-- [x] Implement graceful `vm down vault dev` without deleting VM or browser state.
-- [x] Implement `vm restart vault dev` as a graceful stop followed by start.
-- [x] Implement `vm rebuild vault dev` so it updates the declarative guest and preserves persistent user/browser state.
-- [x] Implement non-sensitive `vm status vault dev` with resolved text/icon identity, VM state, and VPN state.
+- [x] Implement `vm up demo dev` with validation, preflight, deterministic VM lookup/creation, runtime materialization, start, and graphical presentation.
+- [x] Implement graceful `vm down demo dev` without deleting VM or browser state.
+- [x] Implement `vm restart demo dev` as a graceful stop followed by start.
+- [x] Implement `vm rebuild demo dev` so it updates the declarative guest and preserves persistent user/browser state.
+- [x] Implement non-sensitive `vm status demo dev` with resolved text/icon identity, VM state, and VPN state.
 - [x] Implement `vm list` from the single flake workspace registry with stable machine-readable output and optional interactive styling.
-- [x] Add per-workspace state/log paths using `vault/dev`, restrictive modes, and redaction.
+- [x] Add per-workspace state/log paths using `demo/dev`, restrictive modes, and redaction.
 - [x] Add explicit recovery behavior for interrupted creation, failed starts, stale runtime material, and unresponsive graceful shutdown.
 - [x] Document that destruction is out of scope unless added as a separate, confirmed command; never overload `down` or `rebuild`.
 - [x] Run fake-backend tests, Bats, shell lint/format, Nix checks/builds, and the available real Tart restart/rebuild checks.

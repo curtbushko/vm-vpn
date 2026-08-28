@@ -2,7 +2,7 @@
 
 setup() {
 	REPO_ROOT="$(cd "${BATS_TEST_DIRNAME}/.." && pwd)"
-	INSTALL_COMMAND="${REPO_ROOT}/scripts/install-vault-dev"
+	INSTALL_COMMAND="${REPO_ROOT}/scripts/install-demo-dev"
 }
 
 @test "help documents required destructive arguments" {

@@ -1,20 +1,20 @@
 let
   flake = builtins.getFlake (toString ./..);
   workspace = flake.workspace;
-  system = flake.nixosConfigurations.vault-dev.config;
-  installer = flake.nixosConfigurations.vault-dev-installer.config;
+  system = flake.nixosConfigurations.demo-dev.config;
+  installer = flake.nixosConfigurations.demo-dev-installer.config;
   hyprlandConfig = system.environment.etc."xdg/hypr/hyprland.conf".text;
-  quickshellConfig = system.environment.etc."xdg/quickshell/vault-dev/shell.qml".text;
+  quickshellConfig = system.environment.etc."xdg/quickshell/demo-dev/shell.qml".text;
   packageNames = map (package: package.pname or package.name) system.environment.systemPackages;
   shellPackageNames = map (
     package: package.pname or package.name
   ) flake.devShells.aarch64-darwin.default.nativeBuildInputs;
 in
-assert workspace.product == "vault";
+assert workspace.product == "demo";
 assert workspace.environment == "dev";
-assert workspace.vmName == "vault-dev";
-assert workspace.vmPath == "vault/dev";
-assert system.networking.hostName == "vault-dev";
+assert workspace.vmName == "demo-dev";
+assert workspace.vmPath == "demo/dev";
+assert system.networking.hostName == "demo-dev";
 assert system.programs.hyprland.enable;
 assert
   builtins.match ".*start-hyprland.*" system.services.greetd.settings.initial_session.command != null;

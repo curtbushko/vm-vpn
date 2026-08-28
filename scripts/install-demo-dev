@@ -5,17 +5,17 @@ set -euo pipefail
 usage() {
 	cat <<'EOF'
 Usage:
-  install-vault-dev --device DEVICE --repo PATH --yes
-  install-vault-dev --device DEVICE --repo PATH --dry-run
-  install-vault-dev --device DEVICE --repo PATH --resume --yes
+  install-demo-dev --device DEVICE --repo PATH --yes
+  install-demo-dev --device DEVICE --repo PATH --dry-run
+  install-demo-dev --device DEVICE --repo PATH --resume --yes
 
-Partitions the Phase 1 Tart disk and installs the vault-dev NixOS closure.
+Partitions the Phase 1 Tart disk and installs the demo-dev NixOS closure.
 The only accepted installation device is /dev/vda.
 EOF
 }
 
 fail() {
-	printf 'install-vault-dev: %s\n' "$*" >&2
+	printf 'install-demo-dev: %s\n' "$*" >&2
 	exit 1
 }
 
@@ -122,13 +122,13 @@ main() {
 	fi
 
 	if [[ "$DRY_RUN" == "true" ]]; then
-		printf "nix --extra-experimental-features 'nix-command flakes' build --no-link --print-out-paths %q\n" "$repo#nixosConfigurations.vault-dev.config.system.build.toplevel"
+		printf "nix --extra-experimental-features 'nix-command flakes' build --no-link --print-out-paths %q\n" "$repo#nixosConfigurations.demo-dev.config.system.build.toplevel"
 		printf 'nixos-install --root /mnt --system SYSTEM_PATH --no-root-password\n'
 		return 0
 	fi
 
 	local system_path
-	system_path="$(nix --extra-experimental-features "nix-command flakes" build --no-link --print-out-paths "$repo#nixosConfigurations.vault-dev.config.system.build.toplevel")"
+	system_path="$(nix --extra-experimental-features "nix-command flakes" build --no-link --print-out-paths "$repo#nixosConfigurations.demo-dev.config.system.build.toplevel")"
 	nixos-install --root /mnt --system "$system_path" --no-root-password
 }
 

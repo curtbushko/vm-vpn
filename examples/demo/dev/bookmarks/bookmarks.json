@@ -1,0 +1,19 @@
+[
+  {
+    "title": "HashiCorp Vault documentation",
+    "url": "https://developer.hashicorp.com/vault/docs"
+  },
+  {
+    "title": "AWS Client VPN user guide",
+    "url": "https://docs.aws.amazon.com/vpn/latest/clientvpn-user/what-is.html"
+  },
+  {
+    "title": "NixOS options search",
+    "url": "https://search.nixos.org/options"
+  },
+  {
+    "title": "Hyprland documentation",
+    "url": "https://wiki.hypr.land/"
+  }
+]
+

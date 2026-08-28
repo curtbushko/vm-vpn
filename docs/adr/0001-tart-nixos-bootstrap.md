@@ -27,7 +27,7 @@ Tart owns the VM disk, while NixOS owns the installed system configuration.
    rather than configuring a host-global remote builder.
 4. Build an `aarch64-linux` NixOS installer ISO inside the builder and copy only
    the resulting ISO into the artifact share.
-5. Create the workspace as a persistent Tart Linux VM named `vault-dev`, boot
+5. Create the workspace as a persistent Tart Linux VM named `demo-dev`, boot
    the installer ISO, and install NixOS onto the Tart-owned disk.
 6. Apply later NixOS configurations through Tart guest exec or SSH and
    `nixos-rebuild`, preserving the installed disk and `/home/vpn`.
