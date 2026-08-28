@@ -174,6 +174,7 @@
           darwinPkgs.ripgrep
           darwinPkgs.shellcheck
           darwinPkgs.shfmt
+          darwinPkgs.sshpass
           tart
           vm
         ];

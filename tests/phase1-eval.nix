@@ -117,6 +117,7 @@ assert builtins.elem "direnv" shellPackageNames;
 assert builtins.elem "go" shellPackageNames;
 assert builtins.elem "openssh" shellPackageNames;
 assert builtins.elem "packer" shellPackageNames;
+assert builtins.elem "sshpass" shellPackageNames;
 assert builtins.elem "tart" shellPackageNames;
 assert builtins.elem "daemonize" shellPackageNames;
 true

@@ -2,13 +2,22 @@
 
 set -euo pipefail
 
-if ! command -v brew >/dev/null 2>&1; then
-	printf 'install-apps: the selected Tart base image must provide Homebrew\n' >&2
+sudo /usr/sbin/networksetup -setdnsservers Ethernet 1.1.1.1 8.8.8.8
+
+if ! command -v /usr/bin/curl >/dev/null 2>&1; then
+	printf 'install-apps: curl is required\n' >&2
 	exit 1
 fi
+
+if [[ ! -x /opt/homebrew/bin/brew ]]; then
+	NONINTERACTIVE=1 /bin/bash -c "$(/usr/bin/curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+fi
+export PATH="/opt/homebrew/bin:${PATH}"
 
 brew update
 brew install --cask firefox
 brew install --cask ghostty
+brew install --cask aws-vpn-client
+brew install jq
 brew install neovim
 brew install dockutil

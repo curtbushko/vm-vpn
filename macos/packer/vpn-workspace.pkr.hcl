@@ -1,7 +1,7 @@
 packer {
   required_plugins {
     tart = {
-      version = "= 1.15.1"
+      version = "= 1.16.0"
       source  = "github.com/cirruslabs/tart"
     }
   }
@@ -26,18 +26,9 @@ source "tart-cli" "vpn_workspace" {
   memory_gb    = 8
   disk_size_gb = 50
   display      = "1440x900"
-  ssh_username = "admin"
-  ssh_password = "admin"
-  ssh_timeout  = "10m"
+  communicator = "none"
 }
 
 build {
   sources = ["source.tart-cli.vpn_workspace"]
-
-  provisioner "shell" {
-    scripts = [
-      "macos/scripts/install-apps",
-      "macos/scripts/cleanup-apps",
-    ]
-  }
 }

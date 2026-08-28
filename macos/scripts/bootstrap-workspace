@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+readonly WORKSPACE_ROOT="/Volumes/My Shared Files/workspace"
+readonly VPN_DESTINATION="${HOME}/.config/AWSVPNClient/OpenVpnConfigs"
+readonly FIREFOX_ROOT="${HOME}/Library/Application Support/Firefox"
+readonly STATE_ROOT="${HOME}/.local/state/vm-vpn"
+
+[[ -d "$WORKSPACE_ROOT" ]] || exit 0
+
+install -d -m 0700 "$VPN_DESTINATION" "$STATE_ROOT"
+if [[ -d "${WORKSPACE_ROOT}/vpn" ]]; then
+	while IFS= read -r -d '' profile; do
+		install -m 0600 "$profile" "${VPN_DESTINATION}/$(basename "$profile")"
+	done < <(find "${WORKSPACE_ROOT}/vpn" -maxdepth 1 -type f -name '*.ovpn' -print0)
+fi
+
+readonly BOOKMARKS_SOURCE="${WORKSPACE_ROOT}/bookmarks/bookmarks.json"
+[[ -f "$BOOKMARKS_SOURCE" ]] || exit 0
+if ! command -v jq >/dev/null 2>&1; then
+	printf 'bootstrap-workspace: jq is required\n' >&2
+	exit 1
+fi
+
+bookmark_checksum="$(shasum -a 256 "$BOOKMARKS_SOURCE" | awk '{ print $1 }')"
+readonly bookmark_checksum
+if [[ -f "${STATE_ROOT}/bookmarks.checksum" ]] &&
+	[[ "$(<"${STATE_ROOT}/bookmarks.checksum")" == "$bookmark_checksum" ]]; then
+	exit 0
+fi
+
+bookmarks_html="${STATE_ROOT}/bookmarks.html"
+readonly bookmarks_html
+{
+	printf '%s\n' '<!DOCTYPE NETSCAPE-Bookmark-file-1>' '<TITLE>VM VPN bookmarks</TITLE>' '<H1>VM VPN bookmarks</H1>' '<DL><p>'
+	jq -r '.[] | "<DT><A HREF=\"" + (.url | @html) + "\">" + (.title | @html) + "</A>"' "$BOOKMARKS_SOURCE"
+	printf '%s\n' '</DL><p>'
+} >"$bookmarks_html"
+chmod 0600 "$bookmarks_html"
+
+profile_updated=false
+if [[ -d "${FIREFOX_ROOT}/Profiles" ]]; then
+	for profile in "${FIREFOX_ROOT}"/Profiles/*; do
+		[[ -d "$profile" ]] || continue
+		cp "$bookmarks_html" "${profile}/vm-vpn-bookmarks.html"
+		cat >>"${profile}/user.js" <<EOF
+user_pref("browser.bookmarks.file", "${profile}/vm-vpn-bookmarks.html");
+user_pref("browser.places.importBookmarksHTML", true);
+EOF
+		profile_updated=true
+	done
+fi
+
+if [[ "$profile_updated" == true ]]; then
+	printf '%s\n' "$bookmark_checksum" >"${STATE_ROOT}/bookmarks.checksum"
+	chmod 0600 "${STATE_ROOT}/bookmarks.checksum"
+fi

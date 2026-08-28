@@ -29,15 +29,16 @@ Initialize the Packer plugin and build from the repository root:
 
 ```console
 nix develop -c packer init macos/packer
-nix develop -c packer build \
-  -var 'base_vm=ghcr.io/cirruslabs/macos-sequoia-base:latest' \
-  -var 'vm_name=vm-vpn-macos-base' \
-  macos/packer/vpn-workspace.pkr.hcl
+nix develop -c macos/scripts/build-image \
+  ghcr.io/cirruslabs/macos-sequoia-base:latest \
+  vm-vpn-macos-base
 ```
 
-The selected base image must provide Homebrew. The Packer result is a stopped
-local Tart VM named by `vm_name`; clone that golden image before using it for a
-workspace.
+The wrapper uses Packer to create the image, then bootstraps Homebrew and
+provisions through Tart's guest agent, avoiding host-to-guest SSH. The result is
+a stopped local Tart VM named by the second argument; clone that golden image
+before using it for a workspace. Its 50 GB disk is sparse, and product data
+remains on host mounts rather than growing the image.
 
 The dock's **AWS VPN client** button opens a floating Ghostty window. The
 client reads `/run/vpn-workspace/vpn/profile.ovpn`, opens Firefox for AWS SAML

@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly SCRIPT_DIR
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+readonly REPO_ROOT
+readonly BASE_VM="${1:-ghcr.io/cirruslabs/macos-sequoia-base:latest}"
+readonly VM_NAME="${2:-vm-vpn-macos-base}"
+
+for command in daemonize packer tart; do
+	if ! command -v "$command" >/dev/null 2>&1; then
+		printf 'build-image: %s is required; run through nix develop\n' "$command" >&2
+		exit 1
+	fi
+done
+
+stop_build_guest() {
+	if tart get "$VM_NAME" 2>/dev/null | tail -n 1 | grep -q 'running$'; then
+		tart stop "$VM_NAME"
+	fi
+}
+trap stop_build_guest EXIT
+
+cd "$REPO_ROOT"
+packer build -color=false \
+	-var "base_vm=${BASE_VM}" \
+	-var "vm_name=${VM_NAME}" \
+	macos/packer/vpn-workspace.pkr.hcl
+
+tart_bin="$(command -v tart)"
+readonly tart_bin
+daemonize -a \
+	-o "/tmp/${VM_NAME}-provision.log" \
+	-e "/tmp/${VM_NAME}-provision.log" \
+	"$tart_bin" run "$VM_NAME" --no-graphics
+
+VM_NAME="$VM_NAME" "${SCRIPT_DIR}/provision-vm"
+stop_build_guest
+trap - EXIT
+printf 'built %s from %s\n' "$VM_NAME" "$BASE_VM"
