@@ -76,6 +76,7 @@ assert builtins.match ".*Quickshell[.]execDetached.*firefox.*" quickshellConfig 
 assert builtins.match ".*Quickshell[.]execDetached.*ghostty.*" quickshellConfig != null;
 assert builtins.match ".*Quickshell[.]execDetached.*openaws-vpn-client.*" quickshellConfig != null;
 assert builtins.match ".*pkill.*openaws-vpn-client.*" quickshellConfig != null;
+assert builtins.match ".*pkill -u [$]UID -f.*" quickshellConfig != null;
 assert builtins.match ".*firefoxLauncher[.]running.*" quickshellConfig == null;
 assert system.environment.sessionVariables.XCURSOR_THEME == "Adwaita";
 assert system.environment.sessionVariables.XCURSOR_SIZE == "24";

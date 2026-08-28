@@ -291,7 +291,7 @@
               Layout.preferredWidth: 138; Layout.preferredHeight: 46; radius: 12
               color: vpnMouse.containsMouse ? "#3f384a" : "transparent"
               Text { anchors.centerIn: parent; text: "󰖂  Open VPN client"; color: "#ffffff"; font.family: "JetBrainsMono Nerd Font"; font.pixelSize: 13 }
-              MouseArea { id: vpnMouse; anchors.fill: parent; hoverEnabled: true; onClicked: Quickshell.execDetached(["${pkgs.bash}/bin/bash", "-lc", "${pkgs.procps}/bin/pkill -u \\"$UID\\" -f '^openaws-vpn-client$' 2>/dev/null || true; exec ${openawsVpnClient}/bin/openaws-vpn-client"]) }
+              MouseArea { id: vpnMouse; anchors.fill: parent; hoverEnabled: true; onClicked: Quickshell.execDetached(["${pkgs.bash}/bin/bash", "-lc", "${pkgs.procps}/bin/pkill -u $UID -f '^openaws-vpn-client$' 2>/dev/null || true; exec ${openawsVpnClient}/bin/openaws-vpn-client"]) }
             }
           }
         }
