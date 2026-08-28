@@ -61,6 +61,8 @@ assert builtins.elem "fuzzel" packageNames;
 assert builtins.elem "openaws-vpn-client" packageNames;
 assert builtins.match ".*ApplicationFlags::NON_UNIQUE.*" openawsPackage.drvAttrs.postPatch == null;
 assert builtins.match ".*connect_startup.*" openawsPackage.drvAttrs.postPatch == null;
+assert
+  builtins.match ".*idle_add_local_once.*app[.]activate.*" openawsPackage.drvAttrs.postPatch != null;
 assert builtins.match ".*default_width[(]720[)].*" openawsPackage.drvAttrs.postPatch != null;
 assert builtins.match ".*default_height[(]520[)].*" openawsPackage.drvAttrs.postPatch != null;
 assert builtins.match ".*GTK_CSD.*1.*" openawsPackage.drvAttrs.postInstall != null;

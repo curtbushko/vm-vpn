@@ -52,7 +52,8 @@ rustPlatform.buildRustPackage {
       --replace-fail '        println!("Remote {:?}", &remote);' ""
     substituteInPlace src/main.rs \
       --replace-fail '.default_width(320)' '.default_width(720)' \
-      --replace-fail '.default_height(260)' '.default_height(520)'
+      --replace-fail '.default_height(260)' '.default_height(520)' \
+      --replace-fail '        app.run();' '        let activate_app = app.clone(); gtk::glib::idle_add_local_once(move || activate_app.activate()); app.run();'
   '';
 
   postInstall = ''
