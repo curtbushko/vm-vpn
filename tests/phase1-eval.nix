@@ -60,8 +60,10 @@ assert builtins.elem "quickshell" packageNames;
 assert builtins.elem "fuzzel" packageNames;
 assert builtins.elem "openaws-vpn-client" packageNames;
 assert builtins.match ".*ApplicationFlags::NON_UNIQUE.*" openawsPackage.drvAttrs.postPatch == null;
-assert builtins.match ".*connect_startup.*" openawsPackage.drvAttrs.postPatch != null;
-assert builtins.match ".*gtk::init.*app[.]register.*" openawsPackage.drvAttrs.postPatch != null;
+assert builtins.match ".*connect_startup.*" openawsPackage.drvAttrs.postPatch == null;
+assert
+  builtins.match ".*gtk::init.*app[.]register.*emit_by_name.*activate.*" openawsPackage.drvAttrs.postPatch
+  != null;
 assert builtins.match ".*HeaderBar.*show_close_button.*" openawsPackage.drvAttrs.postPatch != null;
 assert
   builtins.match ".*app[.]hold.*connect_destroy.*release.*" openawsPackage.drvAttrs.postPatch != null;
