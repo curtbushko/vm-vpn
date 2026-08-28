@@ -25,6 +25,10 @@ assert system.networking.hostName == "demo-dev";
 assert system.programs.hyprland.enable;
 assert system.services.resolved.enable;
 assert system.networking.networkmanager.dns == "systemd-resolved";
+assert system.networking.networkmanager.settings.main.no-auto-default == "*";
+assert
+  system.networking.networkmanager.ensureProfiles.profiles.vm-vpn-uplink.connection.autoconnect-priority
+  == 100;
 assert
   system.networking.networkmanager.ensureProfiles.profiles.vm-vpn-uplink.ipv4.ignore-auto-dns
   == "true";

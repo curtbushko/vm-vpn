@@ -11,12 +11,14 @@
 
   networking.networkmanager.enable = true;
   networking.networkmanager.dns = "systemd-resolved";
+  networking.networkmanager.settings.main.no-auto-default = "*";
   networking.networkmanager.ensureProfiles.profiles.vm-vpn-uplink = {
     connection = {
       id = "vm-vpn-uplink";
       type = "ethernet";
       interface-name = "enp0s1";
       autoconnect = true;
+      autoconnect-priority = 100;
     };
     ipv4 = {
       method = "auto";
