@@ -56,6 +56,26 @@ while IFS= read -r cask; do
 	brew uninstall --cask --force "$cask"
 done < <(brew list --cask)
 
+while IFS= read -r formula; do
+	case "$formula" in
+	dockutil | jq | neovim | tart-guest-agent | */tart-guest-agent)
+		continue
+		;;
+	esac
+	brew uninstall --formula --force "$formula"
+done < <(brew leaves)
+brew autoremove
+
+while IFS= read -r tap; do
+	case "$tap" in
+	homebrew/core | homebrew/cask | openai/tools)
+		continue
+		;;
+	esac
+	brew untap --force "$tap"
+done < <(brew tap)
+brew cleanup --prune=all
+
 dockutil --remove all --no-restart
 for app in "${dock_apps[@]}"; do
 	if [[ -d "$app" ]]; then

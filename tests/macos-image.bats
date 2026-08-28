@@ -23,6 +23,7 @@ setup() {
 	grep -Fq 'packer build' "$build_script"
 	grep -Fq 'provision-vm' "$build_script"
 	grep -Fq 'tart stop' "$build_script"
+	grep -Fq 'export VM_NAME' "$build_script"
 }
 
 @test "macOS image installs Ghostty and Neovim" {
@@ -30,6 +31,7 @@ setup() {
 	grep -Fq 'brew install --cask aws-vpn-client' "${INSTALL_SCRIPT}"
 	grep -Fq 'brew install neovim' "${INSTALL_SCRIPT}"
 	grep -Fq 'Homebrew/install/HEAD/install.sh' "${INSTALL_SCRIPT}"
+	grep -Fq 'brew install openai/tools/tart-guest-agent' "${INSTALL_SCRIPT}"
 	grep -Fq 'networksetup -setdnsservers Ethernet 1.1.1.1 8.8.8.8' "${INSTALL_SCRIPT}"
 }
 
@@ -64,6 +66,15 @@ setup() {
 @test "macOS cleanup removes casks outside the minimal VPN workspace allowlist" {
 	grep -Eq 'firefox[[:space:]]*[|][[:space:]]*ghostty[[:space:]]*[|][[:space:]]*aws-vpn-client' "${CLEANUP_SCRIPT}"
 	grep -Fq 'brew uninstall --cask --force' "${CLEANUP_SCRIPT}"
+}
+
+@test "macOS cleanup removes inherited formulae and download caches" {
+	grep -Eq 'dockutil[[:space:]]*[|][[:space:]]*jq[[:space:]]*[|][[:space:]]*neovim[[:space:]]*[|][[:space:]]*tart-guest-agent' "${CLEANUP_SCRIPT}"
+	grep -Fq 'brew uninstall --formula --force' "${CLEANUP_SCRIPT}"
+	grep -Fq 'brew autoremove' "${CLEANUP_SCRIPT}"
+	grep -Fq 'brew cleanup --prune=all' "${CLEANUP_SCRIPT}"
+	grep -Fq '*/tart-guest-agent' "${CLEANUP_SCRIPT}"
+	grep -Fq 'brew untap --force' "${CLEANUP_SCRIPT}"
 }
 
 @test "macOS image tooling is supplied by the Nix development shell" {

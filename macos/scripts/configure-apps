@@ -72,3 +72,8 @@ chmod 0600 "$LAUNCH_AGENT"
 
 defaults write NSGlobalDomain AppleInterfaceStyle -string Dark
 defaults write NSGlobalDomain AppleInterfaceStyleSwitchesAutomatically -bool false
+printf '00000000: 1ced 3f4a bcbc ba2c caca 4e82\n' | sudo /usr/bin/xxd -r - /etc/kcpassword
+sudo defaults write /Library/Preferences/com.apple.loginwindow autoLoginUser admin
+sudo defaults write /Library/Preferences/com.apple.screensaver loginWindowIdleTime 0
+defaults -currentHost write com.apple.screensaver idleTime 0
+sudo systemsetup -setsleep Off >/dev/null

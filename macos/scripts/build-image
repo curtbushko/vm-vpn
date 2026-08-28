@@ -8,6 +8,7 @@ REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 readonly REPO_ROOT
 readonly BASE_VM="${1:-ghcr.io/cirruslabs/macos-sequoia-base:latest}"
 readonly VM_NAME="${2:-vm-vpn-macos-base}"
+export VM_NAME
 
 for command in daemonize packer tart; do
 	if ! command -v "$command" >/dev/null 2>&1; then
@@ -36,7 +37,7 @@ daemonize -a \
 	-e "/tmp/${VM_NAME}-provision.log" \
 	"$tart_bin" run "$VM_NAME" --no-graphics
 
-VM_NAME="$VM_NAME" "${SCRIPT_DIR}/provision-vm"
+"${SCRIPT_DIR}/provision-vm"
 stop_build_guest
 trap - EXIT
 printf 'built %s from %s\n' "$VM_NAME" "$BASE_VM"
