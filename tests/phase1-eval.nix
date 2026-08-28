@@ -8,6 +8,11 @@ let
   firefoxPolicyBase = system.environment.etc."vm-vpn/firefox-policies-base.json".text;
   firefoxThemeManifest = system.environment.etc."vm-vpn/firefox-theme-manifest.json".text;
   packageNames = map (package: package.pname or package.name) system.environment.systemPackages;
+  openawsPackage = builtins.head (
+    builtins.filter (
+      package: (package.pname or "") == "openaws-vpn-client"
+    ) system.environment.systemPackages
+  );
   shellPackageNames = map (
     package: package.pname or package.name
   ) flake.devShells.aarch64-darwin.default.nativeBuildInputs;
@@ -54,6 +59,7 @@ assert system.programs.starship.settings == { };
 assert builtins.elem "quickshell" packageNames;
 assert builtins.elem "fuzzel" packageNames;
 assert builtins.elem "openaws-vpn-client" packageNames;
+assert builtins.match ".*ApplicationFlags::NON_UNIQUE.*" openawsPackage.drvAttrs.postPatch != null;
 assert builtins.match ".*local mainMod = \"SUPER\".*" hyprlandConfig != null;
 assert
   builtins.match ".*hl[.]bind[(]mainMod [.][.] \" [+] SPACE\".*fuzzel.*" hyprlandConfig != null;
@@ -69,6 +75,7 @@ assert builtins.match ".*clockText.*" quickshellConfig != null;
 assert builtins.match ".*Quickshell[.]execDetached.*firefox.*" quickshellConfig != null;
 assert builtins.match ".*Quickshell[.]execDetached.*ghostty.*" quickshellConfig != null;
 assert builtins.match ".*Quickshell[.]execDetached.*openaws-vpn-client.*" quickshellConfig != null;
+assert builtins.match ".*pkill.*openaws-vpn-client.*" quickshellConfig != null;
 assert builtins.match ".*firefoxLauncher[.]running.*" quickshellConfig == null;
 assert system.environment.sessionVariables.XCURSOR_THEME == "Adwaita";
 assert system.environment.sessionVariables.XCURSOR_SIZE == "24";
