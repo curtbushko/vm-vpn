@@ -50,42 +50,50 @@
     pkgs.xdg-utils
   ];
 
-  environment.etc."xdg/hypr/hyprland.conf".text = ''
-    monitor = ,preferred,auto,1
-    $mainMod = SUPER
+  environment.etc."xdg/hypr/hyprland.lua".text = ''
+    hl.monitor({
+      output = "",
+      mode = "preferred",
+      position = "auto",
+      scale = 1,
+    })
 
-    exec-once = ${pkgs.swaybg}/bin/swaybg --image /etc/vm-vpn/wallpaper.svg --mode fill
-    exec-once = ${pkgs.quickshell}/bin/qs --path /etc/xdg/quickshell/${workspace.vmName}
-    exec-once = ${pkgs.polkit_gnome}/libexec/polkit-gnome-authentication-agent-1
+    local mainMod = "SUPER"
 
-    input {
-      kb_layout = us
-      follow_mouse = 1
-    }
+    hl.on("hyprland.start", function()
+      hl.exec_cmd([[${pkgs.swaybg}/bin/swaybg --image /etc/vm-vpn/wallpaper.svg --mode fill]])
+      hl.exec_cmd([[${pkgs.quickshell}/bin/qs --path /etc/xdg/quickshell/${workspace.vmName}]])
+      hl.exec_cmd([[${pkgs.polkit_gnome}/libexec/polkit-gnome-authentication-agent-1]])
+    end)
 
-    general {
-      border_size = 3
-      col.active_border = rgb(${workspace.colors.accent})
-      col.inactive_border = rgb(${workspace.colors.inactive})
-    }
+    hl.config({
+      input = {
+        kb_layout = "us",
+        follow_mouse = 1,
+      },
+      general = {
+        border_size = 3,
+        col = {
+          active_border = "rgb(${workspace.colors.accent})",
+          inactive_border = "rgb(${workspace.colors.inactive})",
+        },
+      },
+      decoration = {
+        rounding = 8,
+      },
+      misc = {
+        disable_hyprland_logo = true,
+        disable_splash_rendering = true,
+        background_color = "rgb(${workspace.colors.background})",
+      },
+    })
 
-    decoration {
-      rounding = 8
-    }
-
-    misc {
-      disable_hyprland_logo = true
-      disable_splash_rendering = true
-      background_color = rgb(${workspace.colors.background})
-    }
-
-    bind = $mainMod, RETURN, exec, ${pkgs.ghostty}/bin/ghostty
-    bind = $mainMod, SPACE, exec, ${pkgs.fuzzel}/bin/fuzzel
-    bind = $mainMod, B, exec, ${pkgs.bash}/bin/bash -c 'if [[ -f /run/vpn-workspace/start.html ]]; then exec ${pkgs.firefox}/bin/firefox file:///run/vpn-workspace/start.html; else exec ${pkgs.firefox}/bin/firefox; fi'
-    bind = $mainMod, Q, killactive
-    bind = $mainMod, L, exec, ${pkgs.swaylock}/bin/swaylock --color ${workspace.colors.background}
-    bind = $mainMod SHIFT, E, exit
-
+    hl.bind(mainMod .. " + RETURN", hl.dsp.exec_cmd([[${pkgs.ghostty}/bin/ghostty]]))
+    hl.bind(mainMod .. " + SPACE", hl.dsp.exec_cmd([[${pkgs.fuzzel}/bin/fuzzel]]))
+    hl.bind(mainMod .. " + B", hl.dsp.exec_cmd([[${pkgs.bash}/bin/bash -c 'if [[ -f /run/vpn-workspace/start.html ]]; then exec ${pkgs.firefox}/bin/firefox file:///run/vpn-workspace/start.html; else exec ${pkgs.firefox}/bin/firefox; fi']]))
+    hl.bind(mainMod .. " + Q", hl.dsp.window.close())
+    hl.bind(mainMod .. " + L", hl.dsp.exec_cmd([[${pkgs.swaylock}/bin/swaylock --color ${workspace.colors.background}]]))
+    hl.bind(mainMod .. " + SHIFT + E", hl.dsp.exit())
   '';
 
   environment.etc."xdg/fuzzel/fuzzel.ini".text = ''
