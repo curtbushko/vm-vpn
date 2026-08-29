@@ -182,12 +182,23 @@ setup() {
 @test "macOS image tooling is supplied by the Nix development shell" {
 	nix eval --raw "${REPO_ROOT}#devShells.aarch64-darwin.default.name" >/dev/null
 	grep -A30 'devShells.*default' "${REPO_ROOT}/flake.nix" | grep -Fq 'darwinPkgs.packer'
+	grep -Fq 'shellcheck macos/scripts/* scripts/ci-check' "${REPO_ROOT}/scripts/ci-check"
+	grep -Fq 'shfmt -d macos/scripts/* scripts/ci-check' "${REPO_ROOT}/scripts/ci-check"
+}
+
+@test "flake contains no Linux image build outputs" {
+	run grep -E 'nixosConfigurations|aarch64-linux|demo-dev-installer|aws-vpn-client' "${REPO_ROOT}/flake.nix"
+	[ "${status}" -ne 0 ]
+	grep -Fq 'devShells.${darwinSystem}.default' "${REPO_ROOT}/flake.nix"
 }
 
 @test "README documents Nix-driven macOS image builds" {
 	grep -Fq 'nix develop -c packer init macos/packer' "${REPO_ROOT}/README.md"
 	grep -Fq 'nix develop -c macos/scripts/build-image' "${REPO_ROOT}/README.md"
+	grep -Fq 'Firefox' "${REPO_ROOT}/README.md"
 	grep -Fq 'Ghostty' "${REPO_ROOT}/README.md"
-	grep -Fq 'Neovim' "${REPO_ROOT}/README.md"
+	grep -Fq 'AWS VPN Client' "${REPO_ROOT}/README.md"
+	run grep -E 'NixOS|Hyprland|Neovim|installer ISO' "${REPO_ROOT}/README.md"
+	[ "${status}" -ne 0 ]
 	grep -Fq '50 GB raw disk' "${REPO_ROOT}/README.md"
 }

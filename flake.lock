@@ -1,21 +1,5 @@
 {
   "nodes": {
-    "aws-vpn-client": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1683104131,
-        "narHash": "sha256-Tlfu2TCy5hFerMZB+46TvKM0yGbanJ1Ayk++Vj5LyvI=",
-        "owner": "ethan605",
-        "repo": "aws-vpn-client",
-        "rev": "fc27bc5de33c4ebbb2d5f7c4a6f220d734cb9666",
-        "type": "github"
-      },
-      "original": {
-        "owner": "ethan605",
-        "repo": "aws-vpn-client",
-        "type": "github"
-      }
-    },
     "nixpkgs": {
       "locked": {
         "lastModified": 1787736819,
@@ -34,7 +18,6 @@
     },
     "root": {
       "inputs": {
-        "aws-vpn-client": "aws-vpn-client",
         "nixpkgs": "nixpkgs"
       }
     }

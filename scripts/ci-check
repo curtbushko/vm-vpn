@@ -3,8 +3,8 @@
 set -euo pipefail
 
 bats tests/*.bats
-shellcheck scripts/*
-shfmt -d scripts/*
+shellcheck macos/scripts/* scripts/ci-check
+shfmt -d macos/scripts/* scripts/ci-check
 mapfile -t nix_files < <(rg --files -g '*.nix')
 nixfmt --check "${nix_files[@]}"
 nix flake check --all-systems
