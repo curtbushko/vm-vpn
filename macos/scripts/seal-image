@@ -27,9 +27,7 @@ sudo defaults write /Library/Preferences/com.apple.commerce AutoUpdateRestartReq
 sudo defaults write /Library/Preferences/com.apple.SubmitDiagInfo AutoSubmit -bool false
 sudo defaults write /Library/Preferences/com.apple.SubmitDiagInfo ThirdPartyDataSubmit -bool false
 
-# This appliance does not need banners, badges, or Notification Center. Keep
-# the setting user-scoped so it does not alter the signed system volume.
-defaults write com.apple.notificationcenterui doNotDisturb -bool true
+# This appliance does not need banners, badges, or Notification Center.
 launchctl disable "gui/$(id -u)/com.apple.notificationcenterui.agent"
 killall NotificationCenter 2>/dev/null || true
 
@@ -40,8 +38,8 @@ sudo defaults write /var/db/locationd/Library/Preferences/ByHost/com.apple.locat
 sudo defaults write /var/db/locationd/Library/Preferences/ByHost/com.apple.locationd LocationServicesEnabledInDaemon -bool false
 defaults write NSGlobalDomain NSAutomaticWindowAnimationsEnabled -bool false
 defaults write NSGlobalDomain NSWindowResizeTime -float 0.001
-defaults write com.apple.universalaccess reduceMotion -bool true
-defaults write com.apple.universalaccess reduceTransparency -bool true
+defaults write com.apple.universalaccess reduceMotion -bool true || true
+defaults write com.apple.universalaccess reduceTransparency -bool true || true
 defaults write com.apple.dock launchanim -bool false
 defaults write com.apple.dock expose-animation-duration -float 0.1
 defaults write com.apple.dock autohide-time-modifier -float 0
@@ -171,9 +169,9 @@ done
 
 # Use supported maintenance tools to clear generated indexes, font/Quick Look
 # caches, logs, and periodic temporary state without modifying the signed system
-# volume.
+# volume. Preserve the user font database so Firefox does not start with a
+# partially rebuilt font registry.
 /usr/bin/qlmanage -r cache || true
-/usr/bin/atsutil databases -removeUser || true
 sudo /usr/bin/log erase --all || true
 
 printf 'seal-image: disabled updates, notifications, location, search, AI, indexing, caching, and analytics\n'

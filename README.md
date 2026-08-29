@@ -33,13 +33,18 @@ nix develop -c packer init macos/packer
 nix develop -c macos/scripts/build-image vm-vpn-macos-compact
 ```
 
-The wrapper installs macOS Sequoia directly from Apple's IPSW into a 30 GB ASIF
-(Apple Sparse Image Format) disk. It deletes the recovery partition because the
-workspace is immutable and rebuilt instead of updated. Packer uses SSH only
-during the initial build; the completed image includes Tart's guest agent. The
-result is a stopped local Tart VM named by the argument; clone that golden image
-before using it for a workspace. Product data remains on host mounts rather
-than growing the image.
+The wrapper clones Cirrus Labs' minimal
+`ghcr.io/cirruslabs/macos-sequoia-vanilla:latest` image. This avoids automating
+Setup Assistant and does not inherit the developer packages included in the
+larger Cirrus `base`, `xcode`, or `runner` images. The build wrapper uses the
+documented `admin/admin` credentials once to add Tart's guest agent; subsequent
+provisioning uses that agent. The result is a
+stopped local Tart VM named by the argument; clone that golden image before
+using it for a workspace. The inherited 50 GB raw disk remains sparse on APFS.
+Tart supports growing cloned disks but rejects contraction, and its ASIF option
+applies to new installations rather than converting cloned raw OCI images. The
+build does not truncate APFS behind Tart's back. Product data remains on host
+mounts rather than growing the image.
 
 The appliance uses two virtual CPUs and 6 GB of memory. Its Dock contains only
 Firefox, Ghostty, and AWS VPN Client. Finder desktop icons, widgets, Stage
@@ -54,6 +59,9 @@ savers. It also runs supported macOS
 maintenance commands for logs, font databases, and Quick Look
 caches. SIP and authenticated-root protection remain enabled; Apple system
 applications stay on the signed system volume but are hidden from the Dock.
+They occupy less than 1 GB in the measured Sequoia vanilla image, so the build
+retains SIP and authenticated-root protection instead of weakening the boot
+chain for a marginal reduction.
 
 The dock's **AWS VPN client** button opens a floating Ghostty window. The
 client reads `/run/vpn-workspace/vpn/profile.ovpn`, opens Firefox for AWS SAML

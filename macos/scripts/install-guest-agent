@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+readonly AGENT_URL="https://github.com/openai/tart-guest-agent/releases/download/v0.14.1/tart-guest-agent-darwin-all.tar.gz"
+readonly AGENT_PATH="/usr/local/bin/tart-guest-agent"
+readonly AGENT_PLIST="${HOME}/Library/LaunchAgents/org.openai.tart-guest-agent.plist"
+
+curl -fsSL "${AGENT_URL}" | tar -xz -C /tmp
+sudo install -d -m 0755 /usr/local/bin
+sudo install -m 0755 /tmp/tart-guest-agent "${AGENT_PATH}"
+install -d -m 0700 "${HOME}/Library/LaunchAgents"
+
+cat >"${AGENT_PLIST}" <<EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>org.openai.tart-guest-agent</string>
+  <key>ProgramArguments</key>
+  <array><string>${AGENT_PATH}</string><string>--run-agent</string></array>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><true/>
+</dict>
+</plist>
+EOF
+chmod 0600 "${AGENT_PLIST}"
+launchctl bootout "gui/$(id -u)/org.openai.tart-guest-agent" 2>/dev/null || true
+launchctl bootstrap "gui/$(id -u)" "${AGENT_PLIST}"

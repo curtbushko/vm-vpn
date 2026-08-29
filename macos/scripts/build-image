@@ -34,17 +34,18 @@ packer build -color=false \
 	-var "vm_name=${VM_NAME}" \
 	macos/packer/vpn-workspace.pkr.hcl
 
-# Let Virtualization.Framework release Packer's ASIF attachment before the
-# provisioning boot. Keep Tart attached to this terminal: detached AppKit
-# launches fail to start ASIF guests on current macOS hosts.
+# Let Virtualization.Framework release Packer's cloned disk before the
+# provisioning boot. Keep Tart attached to this terminal because detached
+# AppKit launches can fail to start guests on current macOS hosts.
 sleep 5
 tart run "$VM_NAME" &
 tart_pid=$!
 readonly tart_pid
 
+"${SCRIPT_DIR}/bootstrap-guest-agent"
 "${SCRIPT_DIR}/provision-vm"
 stop_build_guest
 wait "$tart_pid" || true
 trap - EXIT
 tart get "$VM_NAME"
-printf 'built immutable ASIF image %s\n' "$VM_NAME"
+printf 'built immutable macOS appliance %s\n' "$VM_NAME"

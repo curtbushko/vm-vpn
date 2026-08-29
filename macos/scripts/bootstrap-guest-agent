@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly SCRIPT_DIR
+
+for command in tart sshpass; do
+	if ! command -v "$command" >/dev/null 2>&1; then
+		printf 'bootstrap-guest-agent: %s is required; run through nix develop\n' "$command" >&2
+		exit 1
+	fi
+done
+if [[ -z "${VM_NAME:-}" ]]; then
+	printf 'bootstrap-guest-agent: VM_NAME is required\n' >&2
+	exit 1
+fi
+
+readonly SSH_OPTIONS=(
+	-F /dev/null
+	-o StrictHostKeyChecking=no
+	-o UserKnownHostsFile=/dev/null
+	-o ConnectTimeout=5
+)
+export SSHPASS=admin
+
+for attempt in {1..120}; do
+	guest_ip="$(tart ip "$VM_NAME" 2>/dev/null || true)"
+	if [[ -n "$guest_ip" ]] && sshpass -e /usr/bin/ssh "${SSH_OPTIONS[@]}" \
+		"admin@${guest_ip}" /usr/bin/true >/dev/null 2>&1; then
+		readonly guest_ip
+		break
+	fi
+	if [[ "$attempt" -eq 120 ]]; then
+		printf 'bootstrap-guest-agent: vanilla guest SSH did not become ready\n' >&2
+		exit 1
+	fi
+	sleep 2
+done
+
+sshpass -e /usr/bin/ssh -F /dev/null \
+	-o StrictHostKeyChecking=no \
+	-o UserKnownHostsFile=/dev/null \
+	"admin@${guest_ip}" \
+	/usr/bin/sudo /usr/sbin/networksetup -setdnsservers Ethernet 1.1.1.1 8.8.8.8
+
+sshpass -e /usr/bin/ssh -F /dev/null \
+	-o StrictHostKeyChecking=no \
+	-o UserKnownHostsFile=/dev/null \
+	"admin@${guest_ip}" /bin/bash -s <"${SCRIPT_DIR}/install-guest-agent"

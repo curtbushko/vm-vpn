@@ -18,6 +18,20 @@ brew update
 brew install --cask firefox
 brew install --cask ghostty
 brew install --cask aws-vpn-client
+
+# Clear only bundle-level quarantine metadata after installation. Recursing
+# into signed application contents can fail on vendor-protected files and is
+# unnecessary for suppressing the first-launch Gatekeeper dialog.
+readonly -a trusted_apps=(
+	"/Applications/Firefox.app"
+	"/Applications/Ghostty.app"
+	"/Applications/AWS VPN Client/AWS VPN Client.app"
+)
+for app in "${trusted_apps[@]}"; do
+	if xattr -p com.apple.quarantine "$app" >/dev/null 2>&1; then
+		xattr -d com.apple.quarantine "$app"
+	fi
+done
 brew install jq
 brew install dockutil
 brew install openai/tools/tart-guest-agent

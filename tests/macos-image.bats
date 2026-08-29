@@ -7,6 +7,7 @@ setup() {
 	CLEANUP_SCRIPT="${REPO_ROOT}/macos/scripts/cleanup-apps"
 	CONFIGURE_SCRIPT="${REPO_ROOT}/macos/scripts/configure-apps"
 	BOOTSTRAP_SCRIPT="${REPO_ROOT}/macos/scripts/bootstrap-workspace"
+	GUEST_AGENT_SCRIPT="${REPO_ROOT}/macos/scripts/install-guest-agent"
 }
 
 @test "cleanup uses the installed AWS VPN application path" {
@@ -16,26 +17,25 @@ setup() {
 
 @test "macOS image uses the Tart Packer builder" {
 	grep -Fq 'source  = "github.com/cirruslabs/tart"' "${PACKER_TEMPLATE}"
-	grep -Fq 'version = "= 1.16.0"' "${PACKER_TEMPLATE}"
-	grep -Fq 'from_ipsw' "${PACKER_TEMPLATE}"
+	grep -Fq 'version = "= 1.21.0"' "${PACKER_TEMPLATE}"
+	grep -Fq 'vm_base_name = "ghcr.io/cirruslabs/macos-sequoia-vanilla:latest"' "${PACKER_TEMPLATE}"
 	grep -Eq 'communicator[[:space:]]*=[[:space:]]*"none"' "${PACKER_TEMPLATE}"
+	run grep -E 'ssh_username|ssh_password' "${PACKER_TEMPLATE}"
+	[ "${status}" -ne 0 ]
+	run grep -E 'from_ipsw|boot_command' "${PACKER_TEMPLATE}"
+	[ "${status}" -ne 0 ]
 }
 
-@test "macOS image is an immutable compact ASIF installation" {
-	grep -Fq 'from_ipsw' "${PACKER_TEMPLATE}"
-	grep -Fq 'cpu_count          = 2' "${PACKER_TEMPLATE}"
-	grep -Fq 'memory_gb          = 6' "${PACKER_TEMPLATE}"
-	grep -Fq 'disk_size_gb       = 30' "${PACKER_TEMPLATE}"
-	grep -Fq 'disk_format        = "asif"' "${PACKER_TEMPLATE}"
-	grep -Fq 'recovery_partition = "delete"' "${PACKER_TEMPLATE}"
-	grep -Fq 'systemsetup -setsleep Off' "${PACKER_TEMPLATE}"
-	grep -Fq "<wait 'Create a Mac Account'>" "${PACKER_TEMPLATE}"
-	grep -Fq "<wait 'Welcome to Mac'>" "${PACKER_TEMPLATE}"
-	grep -Fq 'tart-guest-agent-darwin-all.tar.gz' "${PACKER_TEMPLATE}"
-	grep -Fq 'org.openai.tart-guest-agent.plist' "${PACKER_TEMPLATE}"
-	grep -Fq 'seal-image' "${REPO_ROOT}/macos/scripts/provision-vm"
-	run grep -F 'vm_base_name' "${PACKER_TEMPLATE}"
+@test "macOS image is an immutable compact vanilla clone" {
+	grep -Fq 'macos-sequoia-vanilla:latest' "${PACKER_TEMPLATE}"
+	grep -Eq 'cpu_count[[:space:]]*=[[:space:]]*2' "${PACKER_TEMPLATE}"
+	grep -Eq 'memory_gb[[:space:]]*=[[:space:]]*6' "${PACKER_TEMPLATE}"
+	run grep -E 'disk_format|disk_size_gb|recovery_partition' "${PACKER_TEMPLATE}"
 	[ "${status}" -ne 0 ]
+	grep -Fq 'bootstrap-guest-agent' "${REPO_ROOT}/macos/scripts/build-image"
+	grep -Fq 'tart-guest-agent-darwin-all.tar.gz' "${GUEST_AGENT_SCRIPT}"
+	grep -Fq 'org.openai.tart-guest-agent.plist' "${GUEST_AGENT_SCRIPT}"
+	grep -Fq 'seal-image' "${REPO_ROOT}/macos/scripts/provision-vm"
 }
 
 @test "macOS build wrapper provisions and stops the Packer artifact" {
@@ -45,18 +45,26 @@ setup() {
 	grep -Fq 'tart get' "$build_script"
 	grep -Fq 'tart run "$VM_NAME" &' "$build_script"
 	grep -Fq 'provision-vm' "$build_script"
+	grep -Fq 'bootstrap-guest-agent' "$build_script"
 	grep -Fq 'tart exec' "${REPO_ROOT}/macos/scripts/provision-vm"
+	grep -Fq 'sshpass -e /usr/bin/ssh -F /dev/null' "${REPO_ROOT}/macos/scripts/bootstrap-guest-agent"
+	grep -Fq 'networksetup -setdnsservers Ethernet 1.1.1.1 8.8.8.8' "${REPO_ROOT}/macos/scripts/bootstrap-guest-agent"
 }
 
-@test "macOS IPSW bootstrap installs the Tart agent before first shutdown" {
-	grep -Fq 'tart-guest-agent-darwin-all.tar.gz' "${PACKER_TEMPLATE}"
-	grep -Fq 'launchctl bootstrap gui/501' "${PACKER_TEMPLATE}"
-	grep -Fq 'base64 -D' "${PACKER_TEMPLATE}"
+@test "macOS vanilla bootstrap installs the Tart agent before first shutdown" {
+	grep -Fq 'tart-guest-agent-darwin-all.tar.gz' "${GUEST_AGENT_SCRIPT}"
+	grep -Fq 'launchctl bootstrap "gui/$(id -u)"' "${GUEST_AGENT_SCRIPT}"
 }
 
 @test "macOS image installs only the required third-party applications" {
+	grep -Fq 'brew install --cask firefox' "${INSTALL_SCRIPT}"
 	grep -Fq 'brew install --cask ghostty' "${INSTALL_SCRIPT}"
 	grep -Fq 'brew install --cask aws-vpn-client' "${INSTALL_SCRIPT}"
+	grep -Fq 'xattr -d com.apple.quarantine' "${INSTALL_SCRIPT}"
+	run grep -F 'xattr -dr' "${INSTALL_SCRIPT}"
+	[ "${status}" -ne 0 ]
+	run grep -F -- '--no-quarantine' "${INSTALL_SCRIPT}"
+	[ "${status}" -ne 0 ]
 	run grep -F 'brew install neovim' "${INSTALL_SCRIPT}"
 	[ "${status}" -ne 0 ]
 	grep -Fq 'Homebrew/install/HEAD/install.sh' "${INSTALL_SCRIPT}"
@@ -78,6 +86,10 @@ setup() {
 	grep -Fq 'bitwarden-password-manager' "${CONFIGURE_SCRIPT}"
 	grep -Fq '1password-x-password-manager' "${CONFIGURE_SCRIPT}"
 	grep -Fq 'tart-guest-agent --run-agent' "${CONFIGURE_SCRIPT}"
+	grep -Fq 'AppleLanguages' "${CONFIGURE_SCRIPT}"
+	grep -Fq 'AppleLocale' "${CONFIGURE_SCRIPT}"
+	grep -Fq 'intl.locale.requested' "${CONFIGURE_SCRIPT}"
+	grep -Fq 'LANG' "${CONFIGURE_SCRIPT}"
 }
 
 @test "macOS bootstrap synchronizes mounted VPN profiles and bookmarks" {
@@ -145,6 +157,8 @@ setup() {
 	grep -Fq 'com.apple.ReportCrash' "${seal_script}"
 	grep -Fq 'NSAutomaticWindowAnimationsEnabled' "${seal_script}"
 	grep -Fq 'reduceTransparency' "${seal_script}"
+	grep -Fq 'reduceMotion -bool true || true' "${seal_script}"
+	grep -Fq 'reduceTransparency -bool true || true' "${seal_script}"
 	grep -Fq 'StandardHideWidgets' "${seal_script}"
 	grep -Fq 'CreateDesktop' "${seal_script}"
 	grep -Fq 'Solid Colors/Black.png' "${seal_script}"
@@ -161,7 +175,8 @@ setup() {
 	grep -Fq 'AutomaticallyInstallMacOSUpdates' "${seal_script}"
 	grep -Fq 'log erase --all' "${seal_script}"
 	grep -Fq 'qlmanage -r cache' "${seal_script}"
-	grep -Fq 'atsutil databases -removeUser' "${seal_script}"
+	run grep -F 'atsutil databases -removeUser' "${seal_script}"
+	[ "${status}" -ne 0 ]
 }
 
 @test "macOS image tooling is supplied by the Nix development shell" {
@@ -174,4 +189,5 @@ setup() {
 	grep -Fq 'nix develop -c macos/scripts/build-image' "${REPO_ROOT}/README.md"
 	grep -Fq 'Ghostty' "${REPO_ROOT}/README.md"
 	grep -Fq 'Neovim' "${REPO_ROOT}/README.md"
+	grep -Fq '50 GB raw disk' "${REPO_ROOT}/README.md"
 }
