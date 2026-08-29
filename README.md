@@ -20,8 +20,9 @@ copy and paste between macOS and every VM.
 
 The experimental macOS path builds a reusable Tart image with Packer while
 keeping every host-side build tool in the Nix development shell. The image
-installs Firefox, Ghostty, Neovim, and Dock configuration tooling. Safari stays
-available. Protected Apple applications such as Calendar remain installed on
+installs Firefox, Ghostty, AWS VPN Client, and Dock configuration tooling.
+Safari stays installed on the signed system volume but is hidden. Protected
+Apple applications such as Calendar remain installed on
 the signed system volume but are omitted from the minimal workspace Dock; SIP
 and authenticated-root protection remain enabled.
 
@@ -29,16 +30,30 @@ Initialize the Packer plugin and build from the repository root:
 
 ```console
 nix develop -c packer init macos/packer
-nix develop -c macos/scripts/build-image \
-  ghcr.io/cirruslabs/macos-sequoia-base:latest \
-  vm-vpn-macos-base
+nix develop -c macos/scripts/build-image vm-vpn-macos-compact
 ```
 
-The wrapper uses Packer to create the image, then bootstraps Homebrew and
-provisions through Tart's guest agent, avoiding host-to-guest SSH. The result is
-a stopped local Tart VM named by the second argument; clone that golden image
-before using it for a workspace. Its 50 GB disk is sparse, and product data
-remains on host mounts rather than growing the image.
+The wrapper installs macOS Sequoia directly from Apple's IPSW into a 30 GB ASIF
+(Apple Sparse Image Format) disk. It deletes the recovery partition because the
+workspace is immutable and rebuilt instead of updated. Packer uses SSH only
+during the initial build; the completed image includes Tart's guest agent. The
+result is a stopped local Tart VM named by the argument; clone that golden image
+before using it for a workspace. Product data remains on host mounts rather
+than growing the image.
+
+The appliance uses two virtual CPUs and 6 GB of memory. Its Dock contains only
+Firefox, Ghostty, and AWS VPN Client. Finder desktop icons, widgets, Stage
+Manager, transparency, and most window animations are disabled; a solid static
+background replaces dynamic wallpaper processing.
+
+Before sealing the image, provisioning disables Time Machine snapshots,
+Spotlight indexing, content caching, automatic macOS downloads and updates,
+notifications, Location Services, Siri, Apple Intelligence and model services,
+suggestions, photo/media analysis, analytics submission, sleep, and screen
+savers. It also runs supported macOS
+maintenance commands for logs, font databases, and Quick Look
+caches. SIP and authenticated-root protection remain enabled; Apple system
+applications stay on the signed system volume but are hidden from the Dock.
 
 The dock's **AWS VPN client** button opens a floating Ghostty window. The
 client reads `/run/vpn-workspace/vpn/profile.ovpn`, opens Firefox for AWS SAML

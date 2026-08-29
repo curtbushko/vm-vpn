@@ -1,0 +1,179 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+# The workspace image is immutable and rebuilt rather than updated. Disable
+# services that create storage which is not useful for VPN and editing work.
+sudo tmutil disable || true
+sudo AssetCacheManagerUtil deactivate || true
+sudo mdutil -a -i off || true
+sudo mdutil -X / || true
+sudo pmset -a sleep 0 disksleep 0 displaysleep 0 hibernatemode 0 powernap 0 tcpkeepalive 0
+for update_service in \
+	system/com.apple.softwareupdated \
+	system/com.apple.mobile.softwareupdated \
+	system/com.apple.mobileassetd; do
+	sudo launchctl disable "$update_service"
+	sudo launchctl kill SIGTERM "$update_service" 2>/dev/null || true
+done
+
+sudo defaults write /Library/Preferences/com.apple.SoftwareUpdate AutomaticCheckEnabled -bool false
+sudo defaults write /Library/Preferences/com.apple.SoftwareUpdate AutomaticDownload -bool false
+sudo defaults write /Library/Preferences/com.apple.SoftwareUpdate AutomaticallyInstallMacOSUpdates -bool false
+sudo defaults write /Library/Preferences/com.apple.SoftwareUpdate ConfigDataInstall -bool false
+sudo defaults write /Library/Preferences/com.apple.SoftwareUpdate CriticalUpdateInstall -bool false
+sudo defaults write /Library/Preferences/com.apple.commerce AutoUpdate -bool false
+sudo defaults write /Library/Preferences/com.apple.commerce AutoUpdateRestartRequired -bool false
+sudo defaults write /Library/Preferences/com.apple.SubmitDiagInfo AutoSubmit -bool false
+sudo defaults write /Library/Preferences/com.apple.SubmitDiagInfo ThirdPartyDataSubmit -bool false
+
+# This appliance does not need banners, badges, or Notification Center. Keep
+# the setting user-scoped so it does not alter the signed system volume.
+defaults write com.apple.notificationcenterui doNotDisturb -bool true
+launchctl disable "gui/$(id -u)/com.apple.notificationcenterui.agent"
+killall NotificationCenter 2>/dev/null || true
+
+defaults write com.apple.assistant.support "Assistant Enabled" -bool false
+defaults write com.apple.Siri StatusMenuVisible -bool false
+defaults write com.apple.Siri UserHasDeclinedEnable -bool true
+sudo defaults write /var/db/locationd/Library/Preferences/ByHost/com.apple.locationd LocationServicesEnabled -bool false
+sudo defaults write /var/db/locationd/Library/Preferences/ByHost/com.apple.locationd LocationServicesEnabledInDaemon -bool false
+defaults write NSGlobalDomain NSAutomaticWindowAnimationsEnabled -bool false
+defaults write NSGlobalDomain NSWindowResizeTime -float 0.001
+defaults write com.apple.universalaccess reduceMotion -bool true
+defaults write com.apple.universalaccess reduceTransparency -bool true
+defaults write com.apple.dock launchanim -bool false
+defaults write com.apple.dock expose-animation-duration -float 0.1
+defaults write com.apple.dock autohide-time-modifier -float 0
+defaults write com.apple.WindowManager GloballyEnabled -bool false
+defaults write com.apple.WindowManager StandardHideWidgets -bool true
+defaults write com.apple.WindowManager StageManagerHideWidgets -bool true
+defaults write com.apple.finder CreateDesktop -bool false
+defaults write com.apple.finder QuitMenuItem -bool true
+defaults write com.apple.screensaver idleTime -int 0
+defaults write com.apple.desktop Background -dict \
+	ImageFilePath -string "/System/Library/Desktop Pictures/Solid Colors/Black.png"
+
+readonly -a user_background_services=(
+	com.apple.Spotlight
+	com.apple.ModelCatalogAgent
+	com.apple.SiriTTSTrainingAgent
+	com.apple.SafariNotificationAgent
+	com.apple.SoftwareUpdateNotificationManager
+	com.apple.UserNotificationCenterAgent
+	com.apple.AddressBook.ContactsAccountsService
+	com.apple.AddressBook.SourceSync
+	com.apple.AirDropUI
+	com.apple.AirPlayUIAgent
+	com.apple.BluetoothUIServer
+	com.apple.CalendarAgent
+	com.apple.ContinuityCaptureShieldUI
+	com.apple.ImageCaptureExtension2
+	com.apple.MigrationAssistant
+	com.apple.Notes
+	com.apple.ScreenTimeAgent
+	com.apple.SidecarRelay
+	com.apple.WallpaperAgent
+	com.apple.accountsd
+	com.apple.appstoreagent
+	com.apple.apsd
+	com.apple.backupd
+	com.apple.bird
+	com.apple.bluetoothuserd
+	com.apple.cloudpaird
+	com.apple.cloudd
+	com.apple.cloudphotod
+	com.apple.commerce
+	com.apple.ensemble
+	com.apple.corespeechd
+	com.apple.corespotlightd
+	com.apple.corespotlightservice
+	com.apple.generativeexperiencesd
+	com.apple.intelligencecontextd
+	com.apple.intelligenceflowd
+	com.apple.intelligenceplatformd
+	com.apple.knowledge-agent
+	com.apple.knowledgeconstructiond
+	com.apple.managedcorespotlightd
+	com.apple.mediaanalysisd
+	com.apple.parsec-fbf
+	com.apple.parsecd
+	com.apple.photoanalysisd
+	com.apple.siriactionsd
+	com.apple.siriinferenced
+	com.apple.siriknowledged
+	com.apple.sirittsd
+	com.apple.spotlightknowledged
+	com.apple.spotlightknowledged.importer
+	com.apple.spotlightknowledged.updater
+	com.apple.suggestd
+	com.apple.icloud.searchpartyuseragent
+	com.apple.familynotificationd
+	com.apple.familycircled
+	com.apple.gamed
+	com.apple.homed
+	com.apple.iCloudNotificationAgent
+	com.apple.iCloudUserNotificationsd
+	com.apple.imagent
+	com.apple.maild
+	com.apple.medialibraryd
+	com.apple.newscore
+	com.apple.passd
+	com.apple.printtool.agent
+	com.apple.rapportd
+	com.apple.remindd
+	com.apple.ReportCrash
+	com.apple.ReportCrash.Self
+	com.apple.sharingd
+	com.apple.storeaccountd
+	com.apple.storeassetd
+	com.apple.storedownloadd
+	com.apple.useractivityd
+	com.apple.usernotificationsd
+	com.apple.weatherd
+)
+for background_service in "${user_background_services[@]}"; do
+	launchctl disable "gui/$(id -u)/${background_service}"
+	launchctl kill SIGTERM "gui/$(id -u)/${background_service}" 2>/dev/null || true
+done
+
+readonly -a system_background_services=(
+	com.apple.OSIntelligence
+	com.apple.ReportCrash.Root
+	com.apple.UserNotificationCenter
+	com.apple.airplayd
+	com.apple.analyticsd
+	com.apple.apsd
+	com.apple.backupd
+	com.apple.backupd-helper
+	com.apple.bluetoothd
+	com.apple.corespeechd_system
+	com.apple.icloud.searchpartyd
+	com.apple.metadata.mds.legacy
+	com.apple.metadata.mds.spindump
+	com.apple.modelcatalogd
+	com.apple.modelmanagerd
+	com.apple.mobile.notification_proxy
+	com.apple.ptpcamerad
+	com.apple.coreduetd.knowledge
+	com.apple.diagnosticd
+	com.apple.icdd
+	com.apple.locationd
+	com.apple.SubmitDiagInfo
+	com.apple.TimeMachine
+	org.cups.cupsd
+	org.cups.cupsd_helper
+)
+for background_service in "${system_background_services[@]}"; do
+	sudo launchctl disable "system/${background_service}"
+	sudo launchctl kill SIGTERM "system/${background_service}" 2>/dev/null || true
+done
+
+# Use supported maintenance tools to clear generated indexes, font/Quick Look
+# caches, logs, and periodic temporary state without modifying the signed system
+# volume.
+/usr/bin/qlmanage -r cache || true
+/usr/bin/atsutil databases -removeUser || true
+sudo /usr/bin/log erase --all || true
+
+printf 'seal-image: disabled updates, notifications, location, search, AI, indexing, caching, and analytics\n'

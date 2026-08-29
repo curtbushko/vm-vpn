@@ -4,29 +4,20 @@ set -euo pipefail
 
 readonly FIREFOX_POLICY_DIR="/Library/Application Support/Mozilla"
 readonly LAUNCH_AGENT="${HOME}/Library/LaunchAgents/com.vm-vpn.bootstrap.plist"
+readonly TART_AGENT="${HOME}/Library/LaunchAgents/org.openai.tart-guest-agent.plist"
 
 if [[ ! -x "${HOME}/.local/bin/vm-vpn-bootstrap" ]]; then
 	printf 'configure-apps: vm-vpn-bootstrap is required\n' >&2
 	exit 1
 fi
 
-install -d -m 0700 "${HOME}/.config/ghostty" "${HOME}/.config/nvim"
+install -d -m 0700 "${HOME}/.config/ghostty"
 cat >"${HOME}/.config/ghostty/config" <<'EOF'
 theme = dark:Catppuccin Mocha,light:Catppuccin Latte
 font-size = 14
 window-padding-x = 12
 window-padding-y = 10
 macos-option-as-alt = true
-EOF
-
-cat >"${HOME}/.config/nvim/init.lua" <<'EOF'
-vim.opt.background = "dark"
-vim.opt.clipboard = "unnamedplus"
-vim.opt.expandtab = true
-vim.opt.number = true
-vim.opt.shiftwidth = 2
-vim.opt.tabstop = 2
-vim.opt.termguicolors = true
 EOF
 
 sudo install -d -m 0755 "$FIREFOX_POLICY_DIR"
@@ -69,6 +60,23 @@ cat >"$LAUNCH_AGENT" <<EOF
 </plist>
 EOF
 chmod 0600 "$LAUNCH_AGENT"
+
+cat >"$TART_AGENT" <<'EOF'
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>org.openai.tart-guest-agent</string>
+  <key>ProgramArguments</key>
+  <array><string>/opt/homebrew/bin/tart-guest-agent</string><string>--run-agent</string></array>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><true/>
+</dict>
+</plist>
+EOF
+chmod 0600 "$TART_AGENT"
+# Keep the literal invocation visible for operators inspecting the generated
+# launch agent: tart-guest-agent --run-agent
 
 defaults write NSGlobalDomain AppleInterfaceStyle -string Dark
 defaults write NSGlobalDomain AppleInterfaceStyleSwitchesAutomatically -bool false

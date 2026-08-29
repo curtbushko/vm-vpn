@@ -34,12 +34,12 @@ readonly -a protected_apps=(
 	Photos
 	Podcasts
 	Reminders
+	Safari
 	Stocks
 	TV
 	Weather
 )
 readonly -a dock_apps=(
-	"/Applications/Safari.app"
 	"/Applications/Firefox.app"
 	"/Applications/Ghostty.app"
 	"/Applications/AWS VPN Client/AWS VPN Client.app"
@@ -58,7 +58,7 @@ done < <(brew list --cask)
 
 while IFS= read -r formula; do
 	case "$formula" in
-	dockutil | jq | neovim | tart-guest-agent | */tart-guest-agent)
+	dockutil | jq | tart-guest-agent | */tart-guest-agent)
 		continue
 		;;
 	esac

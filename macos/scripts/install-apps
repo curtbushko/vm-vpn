@@ -19,6 +19,5 @@ brew install --cask firefox
 brew install --cask ghostty
 brew install --cask aws-vpn-client
 brew install jq
-brew install neovim
 brew install dockutil
 brew install openai/tools/tart-guest-agent

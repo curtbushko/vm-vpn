@@ -6,16 +6,20 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly SCRIPT_DIR
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 readonly REPO_ROOT
-readonly BASE_VM="${1:-ghcr.io/cirruslabs/macos-sequoia-base:latest}"
-readonly VM_NAME="${2:-vm-vpn-macos-base}"
+readonly VM_NAME="${1:-vm-vpn-macos-compact}"
 export VM_NAME
 
-for command in daemonize packer tart; do
+for command in packer tart; do
 	if ! command -v "$command" >/dev/null 2>&1; then
 		printf 'build-image: %s is required; run through nix develop\n' "$command" >&2
 		exit 1
 	fi
 done
+
+if tart get "$VM_NAME" >/dev/null 2>&1; then
+	printf 'build-image: VM already exists: %s\n' "$VM_NAME" >&2
+	exit 1
+fi
 
 stop_build_guest() {
 	if tart get "$VM_NAME" 2>/dev/null | tail -n 1 | grep -q 'running$'; then
@@ -25,19 +29,22 @@ stop_build_guest() {
 trap stop_build_guest EXIT
 
 cd "$REPO_ROOT"
+packer init macos/packer/vpn-workspace.pkr.hcl
 packer build -color=false \
-	-var "base_vm=${BASE_VM}" \
 	-var "vm_name=${VM_NAME}" \
 	macos/packer/vpn-workspace.pkr.hcl
 
-tart_bin="$(command -v tart)"
-readonly tart_bin
-daemonize -a \
-	-o "/tmp/${VM_NAME}-provision.log" \
-	-e "/tmp/${VM_NAME}-provision.log" \
-	"$tart_bin" run "$VM_NAME" --no-graphics
+# Let Virtualization.Framework release Packer's ASIF attachment before the
+# provisioning boot. Keep Tart attached to this terminal: detached AppKit
+# launches fail to start ASIF guests on current macOS hosts.
+sleep 5
+tart run "$VM_NAME" &
+tart_pid=$!
+readonly tart_pid
 
 "${SCRIPT_DIR}/provision-vm"
 stop_build_guest
+wait "$tart_pid" || true
 trap - EXIT
-printf 'built %s from %s\n' "$VM_NAME" "$BASE_VM"
+tart get "$VM_NAME"
+printf 'built immutable ASIF image %s\n' "$VM_NAME"
