@@ -186,7 +186,8 @@ task stop-all
 - `delete` stops and deletes one Tart clone. Its host configuration is
   intentionally preserved so another clone can reuse it.
 - `status` reports one instance's Tart state.
-- `list` shows the managed instances.
+- `list` shows the runnable `<product>/<environment>` host configurations and
+  their paths. It does not expose the Tart base or clone inventory.
 - `stop-all` stops all instances whose names begin with `vm-vpn-`, excluding the
   base.
 

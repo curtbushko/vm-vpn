@@ -45,7 +45,7 @@ tasks:
           '  stop          Stop one VM while preserving its disk and host settings.' \
           '  delete        Stop and delete one clone; preserve its host settings.' \
           '  status        Show Tart details and running state for one VM.' \
-          '  list          List all managed VM clones.' \
+          '  list          List runnable product/environment host configurations.' \
           '  stop-all      Stop every managed clone without deleting any clone.' \
           '  seed          Copy tracked fake VPN, bookmark, and shared demo files.' \
           '  config-path   Print a configuration directory under ~/.config/vm-vpn.' \
@@ -120,7 +120,7 @@ tasks:
       - ./scripts/vm status "$VM_VPN_PRODUCT" "$VM_VPN_ENVIRONMENT"
 
   list:
-    desc: List all managed VM clones.
+    desc: List runnable product/environment host configurations.
     cmds:
       - ./scripts/vm list
 

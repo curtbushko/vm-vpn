@@ -123,9 +123,24 @@ status_vm() {
 	tart get "$vm_name"
 }
 
-list_vms() {
-	require_command tart
-	tart list | awk -v prefix="$INSTANCE_PREFIX" '{ for (field = 1; field <= NF; field++) if (index($field, prefix) == 1 && $field != "vm-vpn-base") print $0 }'
+list_configs() {
+	printf 'PRODUCT\tENVIRONMENT\tCONFIGURATION\n'
+	[[ -d "$CONFIG_ROOT" ]] || return 0
+
+	local product_path environment_path product environment
+	shopt -s nullglob
+	for product_path in "$CONFIG_ROOT"/*; do
+		[[ -d "$product_path" ]] || continue
+		product="${product_path##*/}"
+		[[ "$product" =~ ^[a-z0-9]+(-[a-z0-9]+)*$ ]] || continue
+		for environment_path in "$product_path"/*; do
+			[[ -d "$environment_path" ]] || continue
+			environment="${environment_path##*/}"
+			[[ "$environment" =~ ^[a-z0-9]+(-[a-z0-9]+)*$ ]] || continue
+			[[ -f "$environment_path/bookmarks/bookmarks.json" ]] || continue
+			printf '%s\t%s\t%s\n' "$product" "$environment" "$environment_path"
+		done
+	done
 }
 
 stop_all() {
@@ -187,7 +202,7 @@ main() {
 		;;
 	list)
 		[[ $# -eq 1 ]] || fail "usage: task list"
-		list_vms
+		list_configs
 		;;
 	stop-all)
 		[[ $# -eq 1 ]] || fail "usage: task stop-all"

@@ -12,6 +12,7 @@ setup() {
 	[[ "${output}" == *"task create -- <product> <environment>"* ]]
 	[[ "${output}" == *"product"*"Logical workspace or service name"* ]]
 	[[ "${output}" == *"environment"*"Deployment environment"* ]]
+	[[ "${output}" == *"list"*"runnable product/environment host configurations"* ]]
 	default_output="${output}"
 
 	run task --taskfile "${TASKFILE}" help

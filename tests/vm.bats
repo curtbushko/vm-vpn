@@ -115,14 +115,25 @@ EOF
 	[ -d "${VM_VPN_CONFIG_HOME}/demo/staging" ]
 }
 
-@test "list and stop-all operate only on managed instances" {
+@test "list shows runnable host configurations without Tart inventory details" {
 	"${VM_SCRIPT}" create demo dev
 	"${VM_SCRIPT}" create demo prod
+	"${VM_SCRIPT}" delete demo dev
+	: >"${TART_LOG}"
 
 	run "${VM_SCRIPT}" list
 	[ "${status}" -eq 0 ]
-	[[ "${output}" == *"vm-vpn-demo-dev"* ]]
-	[[ "${output}" == *"vm-vpn-demo-prod"* ]]
+	[[ "${output}" == *$'PRODUCT\tENVIRONMENT\tCONFIGURATION'* ]]
+	[[ "${output}" == *$'demo\tdev\t'"${VM_VPN_CONFIG_HOME}/demo/dev"* ]]
+	[[ "${output}" == *$'demo\tprod\t'"${VM_VPN_CONFIG_HOME}/demo/prod"* ]]
+	[[ "${output}" != *"vm-vpn-"* ]]
+	[ ! -s "${TART_LOG}" ]
+}
+
+@test "stop-all operates only on managed instances" {
+	"${VM_SCRIPT}" create demo dev
+	"${VM_SCRIPT}" create demo prod
+
 	run "${VM_SCRIPT}" stop-all
 	[ "${status}" -eq 0 ]
 	grep -Fxq 'stop vm-vpn-demo-dev' "${TART_LOG}"
