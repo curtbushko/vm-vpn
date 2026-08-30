@@ -6,7 +6,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly SCRIPT_DIR
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 readonly REPO_ROOT
-readonly VM_NAME="${1:-vm-vpn-macos-compact}"
+readonly VM_NAME="${1:-vm-vpn-base}"
 export VM_NAME
 
 for command in packer tart; do

@@ -10,7 +10,7 @@ packer {
 variable "vm_name" {
   type        = string
   description = "Name of the immutable local Tart image"
-  default     = "vm-vpn-macos-compact"
+  default     = "vm-vpn-base"
 }
 
 source "tart-cli" "vpn_workspace" {

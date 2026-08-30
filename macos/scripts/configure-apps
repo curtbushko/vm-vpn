@@ -3,6 +3,7 @@
 set -euo pipefail
 
 readonly FIREFOX_POLICY_DIR="/Library/Application Support/Mozilla"
+readonly FIREFOX_POLICY_FILE="${FIREFOX_POLICY_DIR}/policies.json"
 readonly LAUNCH_AGENT="${HOME}/Library/LaunchAgents/com.vm-vpn.bootstrap.plist"
 readonly TART_AGENT="${HOME}/Library/LaunchAgents/org.openai.tart-guest-agent.plist"
 
@@ -21,10 +22,13 @@ macos-option-as-alt = true
 EOF
 
 sudo install -d -m 0755 "$FIREFOX_POLICY_DIR"
-sudo tee "${FIREFOX_POLICY_DIR}/policies.json" >/dev/null <<'EOF'
+sudo tee "${FIREFOX_POLICY_FILE}" >/dev/null <<'EOF'
 {
   "policies": {
     "DisplayBookmarksToolbar": "always",
+    "ManagedBookmarks": [
+      { "toplevel_name": "VM VPN" }
+    ],
     "ExtensionSettings": {
       "{446900e4-71c2-419f-a6a7-df9c091e268b}": {
         "installation_mode": "force_installed",
@@ -46,6 +50,12 @@ sudo tee "${FIREFOX_POLICY_DIR}/policies.json" >/dev/null <<'EOF'
   }
 }
 EOF
+sudo chown "$(id -u):$(id -g)" "${FIREFOX_POLICY_FILE}"
+sudo chmod 0644 "${FIREFOX_POLICY_FILE}"
+
+# Ensure a Firefox profile exists before runtime configuration is mounted so
+# managed policies are available on the first interactive launch.
+/Applications/Firefox.app/Contents/MacOS/firefox -CreateProfile vm-vpn >/dev/null
 
 install -d -m 0700 "${HOME}/.config/AWSVPNClient/OpenVpnConfigs" "${HOME}/Library/LaunchAgents"
 cat >"$LAUNCH_AGENT" <<EOF

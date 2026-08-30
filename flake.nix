@@ -17,11 +17,26 @@
           ];
       };
       tart = darwinPkgs.callPackage ./packages/tart.nix { };
+      vm = darwinPkgs.writeShellApplication {
+        name = "vm";
+        runtimeInputs = [
+          darwinPkgs.coreutils
+          darwinPkgs.git
+          darwinPkgs.jq
+          tart
+        ];
+        text = builtins.readFile ./scripts/vm;
+      };
     in
     {
       packages.${darwinSystem} = {
-        inherit tart;
-        default = tart;
+        inherit tart vm;
+        default = vm;
+      };
+
+      apps.${darwinSystem}.default = {
+        type = "app";
+        program = "${vm}/bin/vm";
       };
 
       formatter.${darwinSystem} = darwinPkgs.nixfmt;
@@ -43,6 +58,7 @@
           darwinPkgs.shfmt
           darwinPkgs.sshpass
           tart
+          vm
         ];
 
         shellHook = ''

@@ -1,135 +1,106 @@
-# macOS VPN Workspace VM
+# macOS VPN Workspace VMs
 
-This project builds a small, reusable macOS Sequoia appliance for Tart. The
-guest contains Firefox, Ghostty, and AWS VPN Client. Nix remains the host-side
-development environment and supplies Packer, Tart, shell tooling, and tests.
+This repository builds one reusable Tart base image and creates persistent VM
+instances from it. Each instance contains Firefox, Ghostty, and AWS VPN Client,
+but loads its bookmarks, VPN profile, and shared files from a separate host
+directory whenever it starts.
 
-The appliance uses two virtual CPUs, 6 GB of memory, and the Cirrus Labs
-`macos-sequoia-vanilla` image. The inherited 50 GB raw disk remains sparse on
-the host. Packer removes its trailing recovery partition, while SIP and
-authenticated-root protection remain enabled.
+For example, these instances can run concurrently from the same base:
 
-## Clean-host requirements
+| Configuration | Tart instance | Host settings |
+| --- | --- | --- |
+| `demo/dev` | `vm-vpn-demo-dev` | `~/.config/vm-vpn/demo/dev` |
+| `demo/staging` | `vm-vpn-demo-staging` | `~/.config/vm-vpn/demo/staging` |
+| `demo/prod` | `vm-vpn-demo-prod` | `~/.config/vm-vpn/demo/prod` |
 
-A second person can build the appliance from scratch when their host meets all
-of these requirements:
+The appliance runs on an Apple Silicon Mac with two virtual CPUs, 6 GB of
+memory, and a sparse 50 GB raw disk. The current build is based on the
+approximately 24 GB compressed Cirrus Labs Sequoia vanilla image and has
+occupied about 28 GB after provisioning. Tart clones may require additional
+host storage as their files diverge from the base. Rosetta is not used.
 
-- An Apple Silicon Mac. Intel Macs, Linux hosts, and non-Apple virtualization
-  hosts are not supported.
-- Nix with flakes enabled. Nix supplies every other host-side build tool.
-- Internet access to GitHub, GHCR, Homebrew, Mozilla, Ghostty, and AWS download
-  endpoints.
-- About 24 GB of network transfer for the compressed Cirrus vanilla image.
-- About 28 GB of host storage for the built golden image, plus storage for
-  changes made inside each cloned VM.
+## 1. Install Determinate Nix on macOS
 
-macOS may ask for Local Network permission when Tart or Packer first connects
-to a guest. That permission must be granted for SSH bootstrap and guest
-provisioning to work. No Rosetta installation is required.
+This project assumes an Apple Silicon Mac with Determinate Nix. Install it with
+the official Determinate Systems installer:
 
-From a new checkout:
+```console
+curl --proto '=https' --tlsv1.2 -sSf -L \
+  https://install.determinate.systems/nix | sh -s -- install macos
+```
+
+Open a new terminal and verify the installation:
+
+```console
+nix --version
+```
+
+Determinate Nix enables flakes and configures the Nix daemon. If another Nix
+distribution is already installed, follow the Determinate Systems migration
+guide instead of installing over it:
+<https://docs.determinate.systems/guides/migrating-from-upstream-nix/>.
+
+## 2. Enable the development environment with direnv
+
+Install `direnv` through Nix:
+
+```console
+nix profile install nixpkgs#direnv
+```
+
+For the default macOS Zsh shell, add its hook to `~/.zshrc`:
+
+```sh
+eval "$(direnv hook zsh)"
+```
+
+Open a new terminal, clone this repository, enter it, and approve the checked-in
+environment once:
 
 ```console
 git clone <repository-url>
 cd vm-vpn
-nix develop
-packer init macos/packer
-macos/scripts/build-image vm-vpn-macos-compact
-```
-
-The build refuses to overwrite an existing VM named
-`vm-vpn-macos-compact`. Stop, rename, or deliberately remove that existing
-artifact before rebuilding it.
-
-## Development shell
-
-Run all build and test commands from the repository root. Direnv can load the
-development shell automatically:
-
-```console
 direnv allow
 ```
 
-Or enter it explicitly:
+The `.envrc` loads the flake automatically. The `vm` wrapper, Packer, Tart,
+tests, formatters, and shell tools are then on `PATH` whenever this directory is
+entered. The commands below deliberately contain no `nix develop` prefix.
+
+Verify the command environment:
 
 ```console
-nix develop
+vm doctor
 ```
 
-## Build the golden image
+## 3. Build the reusable base
 
 ```console
-nix develop -c packer init macos/packer
-nix develop -c macos/scripts/build-image vm-vpn-macos-compact
+vm build
 ```
 
-The build clones
-`ghcr.io/cirruslabs/macos-sequoia-vanilla:latest`, installs Tart's guest
-agent, Firefox, Ghostty, and AWS VPN Client, applies application defaults, and
-stops the completed image. The Dock contains only those three applications.
+`vm build` wraps Packer and Tart. It downloads the Cirrus image, builds
+`vm-vpn-base`, installs and configures the applications, seals the image, and
+stops it. It refuses to overwrite an existing base.
 
-Provisioning fixes the guest and Firefox language to US English, enables the
-Firefox bookmarks toolbar, installs Bitwarden and 1Password extensions, uses a
-dark browser theme, and removes first-launch quarantine attributes. It also
-disables unneeded synchronization, indexing, update, notification, location,
-AI, analytics, backup, sleep, and visual-effect services.
+The first build may cause macOS to request Local Network permission for Packer
+or Tart. Grant it so provisioning can communicate with the guest.
 
-## Create and run a workspace
+## 4. Create VM instances
 
-Clone the golden image once for each `<product>/<environment>`:
+Create one persistent instance for each product and environment:
 
 ```console
-nix develop -c tart clone vm-vpn-macos-compact <product>-<environment>
-nix develop -c tart run <product>-<environment> \
-  --dir="$HOME/.config/vm-vpn/<product>/<environment>:ro,tag=workspace"
+vm create demo dev
+vm create demo staging
+vm create demo prod
 ```
 
-The host directory is read-only by default. Use `:rw,tag=workspace` only when
-the guest must write to it. Tart exposes the directory inside macOS as:
+`create` clones `vm-vpn-base` and creates the corresponding protected settings
+directory. It does not rebuild macOS. Product and environment names may contain
+lowercase letters, numbers, and internal hyphens.
 
-```text
-/Volumes/My Shared Files/workspace
-```
-
-Stop a workspace without deleting it:
-
-```console
-nix develop -c tart stop <product>-<environment>
-```
-
-Multiple independent workspaces can be cloned from the same golden image:
-
-```console
-nix develop -c tart clone vm-vpn-macos-compact vault-dev
-nix develop -c tart clone vm-vpn-macos-compact consul-lab
-
-nix develop -c tart run vault-dev \
-  --dir="$HOME/.config/vm-vpn/vault/dev:ro,tag=workspace"
-
-nix develop -c tart run consul-lab \
-  --dir="$HOME/.config/vm-vpn/consul/lab:ro,tag=workspace"
-```
-
-Stop them independently:
-
-```console
-nix develop -c tart stop vault-dev
-nix develop -c tart stop consul-lab
-```
-
-Each clone has its own writable VM disk. APFS copy-on-write avoids immediately
-duplicating every block from the golden image, but each VM consumes additional
-host storage as it changes.
-
-The repository does not currently provide a single lifecycle command for
-creating, starting, stopping, or deleting named macOS workspaces. Operators use
-`tart clone`, `tart run`, and `tart stop` directly. Real AWS VPN authentication,
-SAML browser handoff, DNS, and private routes require an interactive acceptance
-test with a real profile.
-
-## `~/.config/vm-vpn/*` settings
-
-Each workspace reads its user-facing files from:
+The host directory format is:
 
 ```text
 ~/.config/vm-vpn/<product>/<environment>/
@@ -140,13 +111,11 @@ Each workspace reads its user-facing files from:
 └── shared/
 ```
 
-- `vpn/*.ovpn` files are copied inside the guest to the AWS-required
-  `~/.config/AWSVPNClient/OpenVpnConfigs` directory with mode `0600`.
-- `bookmarks/bookmarks.json` is imported into Firefox when its checksum
-  changes. The bookmarks toolbar is always visible.
-- `shared/` is available for additional read-only workspace data.
+- Place the environment's AWS Client VPN profile at `vpn/profile.ovpn`.
+- Define Firefox bookmarks in `bookmarks/bookmarks.json`.
+- Put other files that should be visible read-only in `shared/`.
 
-Bookmark entries use this format:
+Bookmarks use this format:
 
 ```json
 [
@@ -157,29 +126,84 @@ Bookmark entries use this format:
 ]
 ```
 
-The tracked `examples/demo/dev` directory is a safe example workspace:
+To populate `demo/dev` with tracked, non-secret examples after creating it:
 
 ```console
-nix develop -c tart clone vm-vpn-macos-compact demo-dev
-nix develop -c tart run demo-dev \
-  --dir="$PWD/examples/demo/dev:ro,tag=workspace"
+vm seed demo dev
 ```
 
-The example VPN profile is intentionally non-functional. Real VPN profiles
-and credentials must not be committed.
+The example VPN profile is intentionally non-functional. Never commit actual
+VPN profiles, private keys, passwords, or credentials.
 
-## Validation
+## 5. Start multiple VMs
+
+Start any or all instances:
 
 ```console
-nix develop -c bats tests/macos-image.bats
-nix develop -c shellcheck macos/scripts/* scripts/ci-check
-nix develop -c packer validate macos/packer
-nix develop -c scripts/ci-check
+vm start demo dev
+vm start demo staging
+vm start demo prod
 ```
 
-The generated VM is left stopped after a successful build. Build failures also
-use a shutdown trap so a guest is not left running unattended.
+Each `start` command owns its Tart window and remains attached while that VM is
+running, so issue concurrent starts from a separate terminal or terminal tab.
 
-The workflow has been built and verified on the development host, but it has
-not yet completed a fresh-machine acceptance run on a second Mac. Perform that
-acceptance run before treating the image pipeline as fully portable.
+They run concurrently as `vm-vpn-demo-dev`, `vm-vpn-demo-staging`, and
+`vm-vpn-demo-prod`. Each start mounts only that instance's
+`~/.config/vm-vpn/<product>/<environment>` directory read-only at
+`/Volumes/My Shared Files/workspace`.
+
+At guest login, the runtime bootstrap:
+
+- Replaces the AWS profile at
+  `~/.config/AWSVPNClient/OpenVpnConfigs/workspace.ovpn` with the mounted
+  `vpn/profile.ovpn`.
+- Replaces Firefox managed bookmarks with the mounted `bookmarks.json` entries.
+- Makes `shared/` available inside the read-only workspace mount.
+
+This keeps environment data out of the reusable base and prevents VPN profiles
+or bookmarks from accumulating across configurations. Changes made to the host
+files take effect the next time that VM starts. Each cloned VM retains its own
+macOS and application state between starts.
+
+## VM lifecycle commands
+
+```console
+vm build
+vm create <product> <environment>
+vm start <product> <environment>
+vm stop <product> <environment>
+vm delete <product> <environment>
+vm status <product> <environment>
+vm list
+vm stop-all
+```
+
+- `build` creates the reusable `vm-vpn-base` image.
+- `create` clones the base and initializes its host configuration if needed.
+- `start` runs one clone with its matching configuration mounted read-only.
+- `stop` stops one instance without deleting it.
+- `delete` stops and deletes one Tart clone. Its host configuration is
+  intentionally preserved so another clone can reuse it.
+- `status` reports one instance's Tart state.
+- `list` shows the managed instances.
+- `stop-all` stops all instances whose names begin with `vm-vpn-`, excluding the
+  base.
+
+## Other wrapper commands
+
+```console
+vm seed demo dev
+vm config-path <product> <environment>
+vm doctor
+vm check
+vm --help
+```
+
+`vm check` runs the test, lint, formatting, and flake quality gates using tools
+provided by the automatically loaded development shell.
+
+Real AWS authentication, SAML browser handoff, DNS, private routes, and internal
+resources still require an interactive acceptance test with a real profile.
+The complete workflow also needs a fresh-machine acceptance run on a second Mac
+before it should be considered fully portable.

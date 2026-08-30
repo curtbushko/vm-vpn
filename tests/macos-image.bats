@@ -90,13 +90,17 @@ setup() {
 	grep -Fq 'AppleLocale' "${CONFIGURE_SCRIPT}"
 	grep -Fq 'intl.locale.requested' "${CONFIGURE_SCRIPT}"
 	grep -Fq 'LANG' "${CONFIGURE_SCRIPT}"
+	grep -Fq -- '-CreateProfile vm-vpn' "${CONFIGURE_SCRIPT}"
 }
 
 @test "macOS bootstrap synchronizes mounted VPN profiles and bookmarks" {
 	grep -Fq '.config/AWSVPNClient/OpenVpnConfigs' "${BOOTSTRAP_SCRIPT}"
 	grep -Fq '/Volumes/My Shared Files/workspace' "${BOOTSTRAP_SCRIPT}"
-	grep -Fq 'bookmarks.json' "${BOOTSTRAP_SCRIPT}"
+	grep -Fq 'vpn/profile.ovpn' "${BOOTSTRAP_SCRIPT}"
+	grep -Fq 'workspace.ovpn' "${BOOTSTRAP_SCRIPT}"
+	grep -Fq 'ManagedBookmarks' "${BOOTSTRAP_SCRIPT}"
 	grep -Fq 'com.vm-vpn.bootstrap.plist' "${CONFIGURE_SCRIPT}"
+	grep -Fq 'chown "$(id -u):$(id -g)" "${FIREFOX_POLICY_FILE}"' "${CONFIGURE_SCRIPT}"
 }
 
 @test "macOS cleanup preserves Safari and system protections" {
@@ -182,8 +186,8 @@ setup() {
 @test "macOS image tooling is supplied by the Nix development shell" {
 	nix eval --raw "${REPO_ROOT}#devShells.aarch64-darwin.default.name" >/dev/null
 	grep -A30 'devShells.*default' "${REPO_ROOT}/flake.nix" | grep -Fq 'darwinPkgs.packer'
-	grep -Fq 'shellcheck macos/scripts/* scripts/ci-check' "${REPO_ROOT}/scripts/ci-check"
-	grep -Fq 'shfmt -d macos/scripts/* scripts/ci-check' "${REPO_ROOT}/scripts/ci-check"
+	grep -Fq 'shellcheck macos/scripts/* scripts/ci-check scripts/vm' "${REPO_ROOT}/scripts/ci-check"
+	grep -Fq 'shfmt -d macos/scripts/* scripts/ci-check scripts/vm' "${REPO_ROOT}/scripts/ci-check"
 }
 
 @test "flake contains no Linux image build outputs" {
@@ -192,9 +196,11 @@ setup() {
 	grep -Fq 'devShells.${darwinSystem}.default' "${REPO_ROOT}/flake.nix"
 }
 
-@test "README documents Nix-driven macOS image builds" {
-	grep -Fq 'nix develop -c packer init macos/packer' "${REPO_ROOT}/README.md"
-	grep -Fq 'nix develop -c macos/scripts/build-image' "${REPO_ROOT}/README.md"
+@test "README documents the VM wrapper workflow" {
+	grep -Fq 'vm build' "${REPO_ROOT}/README.md"
+	grep -Fq 'vm create <product> <environment>' "${REPO_ROOT}/README.md"
+	grep -Fq 'vm delete <product> <environment>' "${REPO_ROOT}/README.md"
+	grep -Fq 'vm start <product> <environment>' "${REPO_ROOT}/README.md"
 	grep -Fq 'Firefox' "${REPO_ROOT}/README.md"
 	grep -Fq 'Ghostty' "${REPO_ROOT}/README.md"
 	grep -Fq 'AWS VPN Client' "${REPO_ROOT}/README.md"
@@ -203,15 +209,21 @@ setup() {
 	grep -Fq '50 GB raw disk' "${REPO_ROOT}/README.md"
 }
 
-@test "README documents clean-host and multi-VM requirements" {
+@test "README documents clean-host and concurrent multi-VM workflow" {
 	grep -Fq 'Apple Silicon Mac' "${REPO_ROOT}/README.md"
-	grep -Fq 'Nix with flakes enabled' "${REPO_ROOT}/README.md"
+	grep -Fq 'Determinate Nix' "${REPO_ROOT}/README.md"
+	grep -Fq 'install.determinate.systems/nix' "${REPO_ROOT}/README.md"
+	grep -Fq 'direnv allow' "${REPO_ROOT}/README.md"
 	grep -Fq '24 GB' "${REPO_ROOT}/README.md"
 	grep -Fq '28 GB' "${REPO_ROOT}/README.md"
 	grep -Fq 'Local Network' "${REPO_ROOT}/README.md"
-	grep -Fq 'tart clone vm-vpn-macos-compact vault-dev' "${REPO_ROOT}/README.md"
-	grep -Fq 'tart clone vm-vpn-macos-compact consul-lab' "${REPO_ROOT}/README.md"
-	grep -Fq 'tart stop vault-dev' "${REPO_ROOT}/README.md"
-	grep -Fq 'does not currently provide a single lifecycle command' "${REPO_ROOT}/README.md"
+	grep -Fq 'vm create demo dev' "${REPO_ROOT}/README.md"
+	grep -Fq 'vm create demo staging' "${REPO_ROOT}/README.md"
+	grep -Fq 'vm create demo prod' "${REPO_ROOT}/README.md"
+	grep -Fq 'vm-vpn-base' "${REPO_ROOT}/README.md"
+	grep -Fq 'run concurrently' "${REPO_ROOT}/README.md"
+	grep -Fq 'separate terminal' "${REPO_ROOT}/README.md"
+	run grep -F 'nix develop -c' "${REPO_ROOT}/README.md"
+	[ "${status}" -ne 0 ]
 	grep -Fq 'fresh-machine acceptance run' "${REPO_ROOT}/README.md"
 }
