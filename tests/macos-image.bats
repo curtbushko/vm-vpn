@@ -202,3 +202,16 @@ setup() {
 	[ "${status}" -ne 0 ]
 	grep -Fq '50 GB raw disk' "${REPO_ROOT}/README.md"
 }
+
+@test "README documents clean-host and multi-VM requirements" {
+	grep -Fq 'Apple Silicon Mac' "${REPO_ROOT}/README.md"
+	grep -Fq 'Nix with flakes enabled' "${REPO_ROOT}/README.md"
+	grep -Fq '24 GB' "${REPO_ROOT}/README.md"
+	grep -Fq '28 GB' "${REPO_ROOT}/README.md"
+	grep -Fq 'Local Network' "${REPO_ROOT}/README.md"
+	grep -Fq 'tart clone vm-vpn-macos-compact vault-dev' "${REPO_ROOT}/README.md"
+	grep -Fq 'tart clone vm-vpn-macos-compact consul-lab' "${REPO_ROOT}/README.md"
+	grep -Fq 'tart stop vault-dev' "${REPO_ROOT}/README.md"
+	grep -Fq 'does not currently provide a single lifecycle command' "${REPO_ROOT}/README.md"
+	grep -Fq 'fresh-machine acceptance run' "${REPO_ROOT}/README.md"
+}

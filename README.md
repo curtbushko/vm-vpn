@@ -9,6 +9,38 @@ The appliance uses two virtual CPUs, 6 GB of memory, and the Cirrus Labs
 the host. Packer removes its trailing recovery partition, while SIP and
 authenticated-root protection remain enabled.
 
+## Clean-host requirements
+
+A second person can build the appliance from scratch when their host meets all
+of these requirements:
+
+- An Apple Silicon Mac. Intel Macs, Linux hosts, and non-Apple virtualization
+  hosts are not supported.
+- Nix with flakes enabled. Nix supplies every other host-side build tool.
+- Internet access to GitHub, GHCR, Homebrew, Mozilla, Ghostty, and AWS download
+  endpoints.
+- About 24 GB of network transfer for the compressed Cirrus vanilla image.
+- About 28 GB of host storage for the built golden image, plus storage for
+  changes made inside each cloned VM.
+
+macOS may ask for Local Network permission when Tart or Packer first connects
+to a guest. That permission must be granted for SSH bootstrap and guest
+provisioning to work. No Rosetta installation is required.
+
+From a new checkout:
+
+```console
+git clone <repository-url>
+cd vm-vpn
+nix develop
+packer init macos/packer
+macos/scripts/build-image vm-vpn-macos-compact
+```
+
+The build refuses to overwrite an existing VM named
+`vm-vpn-macos-compact`. Stop, rename, or deliberately remove that existing
+artifact before rebuilding it.
+
 ## Development shell
 
 Run all build and test commands from the repository root. Direnv can load the
@@ -65,6 +97,36 @@ Stop a workspace without deleting it:
 nix develop -c tart stop <product>-<environment>
 ```
 
+Multiple independent workspaces can be cloned from the same golden image:
+
+```console
+nix develop -c tart clone vm-vpn-macos-compact vault-dev
+nix develop -c tart clone vm-vpn-macos-compact consul-lab
+
+nix develop -c tart run vault-dev \
+  --dir="$HOME/.config/vm-vpn/vault/dev:ro,tag=workspace"
+
+nix develop -c tart run consul-lab \
+  --dir="$HOME/.config/vm-vpn/consul/lab:ro,tag=workspace"
+```
+
+Stop them independently:
+
+```console
+nix develop -c tart stop vault-dev
+nix develop -c tart stop consul-lab
+```
+
+Each clone has its own writable VM disk. APFS copy-on-write avoids immediately
+duplicating every block from the golden image, but each VM consumes additional
+host storage as it changes.
+
+The repository does not currently provide a single lifecycle command for
+creating, starting, stopping, or deleting named macOS workspaces. Operators use
+`tart clone`, `tart run`, and `tart stop` directly. Real AWS VPN authentication,
+SAML browser handoff, DNS, and private routes require an interactive acceptance
+test with a real profile.
+
 ## `~/.config/vm-vpn/*` settings
 
 Each workspace reads its user-facing files from:
@@ -117,3 +179,7 @@ nix develop -c scripts/ci-check
 
 The generated VM is left stopped after a successful build. Build failures also
 use a shutdown trap so a guest is not left running unattended.
+
+The workflow has been built and verified on the development host, but it has
+not yet completed a fresh-machine acceptance run on a second Mac. Perform that
+acceptance run before treating the image pipeline as fully portable.
