@@ -7,64 +7,69 @@ vars:
 
 tasks:
   default:
-    desc: Show the project command guide.
+    desc: Show the config command guide.
     silent: true
     cmds:
       - task: help
 
   help:
-    desc: Explain every project command and its arguments.
+    desc: Explain config, setup, and maintenance commands.
     silent: true
     cmds:
       - |
         printf '%s\n' \
-          'Usage:' \
-          '  task build' \
+          'Run isolated VPN workspace configs. VM images and clones are managed internally.' \
+          '' \
+          'CONFIG COMMANDS' \
+          '  task list' \
           '  task create -- <product> <environment>' \
+          '  task validate -- <product> <environment>' \
           '  task start -- <product> <environment>' \
           '  task stop -- <product> <environment>' \
-          '  task delete -- <product> <environment>' \
           '  task status -- <product> <environment>' \
-          '  task list' \
+          '  task path -- <product> <environment>' \
+          '  task delete -- <product> <environment>' \
           '  task stop-all' \
-          '  task seed -- demo dev' \
-          '  task config-path -- <product> <environment>' \
-          '  task doctor' \
-          '  task check' \
-          '  task help' \
+          '' \
+          '  list          List available configs and runtime state.' \
+          '  create        Create an empty host config without creating a VM.' \
+          '  validate      Check bookmarks, VPN readiness, and config layout.' \
+          '  start         Start a config; create its hidden runtime if needed.' \
+          '  stop          Stop a config while preserving config and runtime state.' \
+          '  status        Show config validity and runtime state.' \
+          '  path          Print the config directory under ~/.config/vm-vpn.' \
+          '  delete        Permanently delete a config and its hidden runtime.' \
+          '  stop-all      Stop every running config.' \
           '' \
           'Arguments:' \
           '  product       Logical workspace or service name, such as demo.' \
           '  environment   Deployment environment, such as dev, staging, or prod.' \
           '                Both accept lowercase letters, numbers, and internal hyphens.' \
           '' \
-          'Commands:' \
-          '  build         Build and seal the reusable vm-vpn-base Tart image.' \
-          '  create        Clone the base and initialize host settings for one VM.' \
-          '  start         Start one VM with its matching host settings mounted.' \
-          '  stop          Stop one VM while preserving its disk and host settings.' \
-          '  delete        Stop and delete one clone; preserve its host settings.' \
-          '  status        Show Tart details and running state for one VM.' \
-          '  list          List runnable product/environment host configurations.' \
-          '  stop-all      Stop every managed clone without deleting any clone.' \
-          '  seed          Copy tracked fake VPN, bookmark, and shared demo files.' \
-          '  config-path   Print a configuration directory under ~/.config/vm-vpn.' \
-          '  doctor        Verify all development-shell tools are available.' \
-          '  check         Run tests, lint, formatting, and Nix flake validation.' \
-          '  help          Show this guide; it is also the default task.' \
+          'SETUP AND MAINTENANCE' \
+          '  task setup          Build the shared runtime image when it is missing.' \
+          '  task seed -- demo dev' \
+          '                      Copy tracked fake files into the demo/dev config.' \
+          '  task clean          Permanently delete orphaned hidden runtimes.' \
+          '  task image:build    Build the internal runtime image directly.' \
+          '  task image:status   Diagnose the internal runtime image.' \
+          '  task doctor         Verify development-shell tools.' \
+          '  task check          Run all project quality gates.' \
+          '  task help           Show this guide; also the default task.' \
           '' \
           'Examples:' \
+          '  task list' \
           '  task create -- demo dev' \
-          '  task start -- demo dev' \
-          '  task delete -- demo dev'
+          '  task validate -- demo dev' \
+          '  task start -- demo dev'
 
-  build:
-    desc: Build and seal the reusable vm-vpn-base Tart image.
+  list:
+    desc: List available configs and runtime state.
     cmds:
-      - ./scripts/vm build
+      - ./scripts/vm list
 
   create:
-    desc: Clone the base for <product> <environment> and initialize host settings.
+    desc: Create the host config for <product> <environment>.
     preconditions:
       - sh: test '{{.ARG_COUNT}}' -eq 2
         msg: 'create requires <product> <environment>; example: task create -- demo dev'
@@ -74,8 +79,19 @@ tasks:
     cmds:
       - ./scripts/vm create "$VM_VPN_PRODUCT" "$VM_VPN_ENVIRONMENT"
 
+  validate:
+    desc: Validate the <product> <environment> config.
+    preconditions:
+      - sh: test '{{.ARG_COUNT}}' -eq 2
+        msg: 'validate requires <product> <environment>; example: task validate -- demo dev'
+    env:
+      VM_VPN_PRODUCT: '{{.PRODUCT}}'
+      VM_VPN_ENVIRONMENT: '{{.ENVIRONMENT}}'
+    cmds:
+      - ./scripts/vm validate "$VM_VPN_PRODUCT" "$VM_VPN_ENVIRONMENT"
+
   start:
-    desc: Start <product> <environment> with its host settings mounted.
+    desc: Start <product> <environment>, creating its hidden runtime if needed.
     interactive: true
     preconditions:
       - sh: test '{{.ARG_COUNT}}' -eq 2
@@ -87,7 +103,7 @@ tasks:
       - ./scripts/vm start "$VM_VPN_PRODUCT" "$VM_VPN_ENVIRONMENT"
 
   stop:
-    desc: Stop <product> <environment> without deleting it.
+    desc: Stop <product> <environment> without deleting its config.
     preconditions:
       - sh: test '{{.ARG_COUNT}}' -eq 2
         msg: 'stop requires <product> <environment>; example: task stop -- demo dev'
@@ -97,19 +113,8 @@ tasks:
     cmds:
       - ./scripts/vm stop "$VM_VPN_PRODUCT" "$VM_VPN_ENVIRONMENT"
 
-  delete:
-    desc: Delete the <product> <environment> clone but preserve host settings.
-    preconditions:
-      - sh: test '{{.ARG_COUNT}}' -eq 2
-        msg: 'delete requires <product> <environment>; example: task delete -- demo dev'
-    env:
-      VM_VPN_PRODUCT: '{{.PRODUCT}}'
-      VM_VPN_ENVIRONMENT: '{{.ENVIRONMENT}}'
-    cmds:
-      - ./scripts/vm delete "$VM_VPN_PRODUCT" "$VM_VPN_ENVIRONMENT"
-
   status:
-    desc: Show Tart details for <product> <environment>.
+    desc: Show config validity and runtime state for <product> <environment>.
     preconditions:
       - sh: test '{{.ARG_COUNT}}' -eq 2
         msg: 'status requires <product> <environment>; example: task status -- demo dev'
@@ -119,18 +124,40 @@ tasks:
     cmds:
       - ./scripts/vm status "$VM_VPN_PRODUCT" "$VM_VPN_ENVIRONMENT"
 
-  list:
-    desc: List runnable product/environment host configurations.
+  path:
+    desc: Print the host path for <product> <environment>.
+    preconditions:
+      - sh: test '{{.ARG_COUNT}}' -eq 2
+        msg: 'path requires <product> <environment>; example: task path -- demo dev'
+    env:
+      VM_VPN_PRODUCT: '{{.PRODUCT}}'
+      VM_VPN_ENVIRONMENT: '{{.ENVIRONMENT}}'
     cmds:
-      - ./scripts/vm list
+      - ./scripts/vm path "$VM_VPN_PRODUCT" "$VM_VPN_ENVIRONMENT"
+
+  delete:
+    desc: Permanently delete the <product> <environment> config and hidden runtime.
+    preconditions:
+      - sh: test '{{.ARG_COUNT}}' -eq 2
+        msg: 'delete requires <product> <environment>; example: task delete -- demo dev'
+    env:
+      VM_VPN_PRODUCT: '{{.PRODUCT}}'
+      VM_VPN_ENVIRONMENT: '{{.ENVIRONMENT}}'
+    cmds:
+      - ./scripts/vm delete "$VM_VPN_PRODUCT" "$VM_VPN_ENVIRONMENT"
 
   stop-all:
-    desc: Stop all managed VM clones without deleting them.
+    desc: Stop all running configs without deleting them.
     cmds:
       - ./scripts/vm stop-all
 
+  setup:
+    desc: Build the shared runtime image only when it is missing.
+    cmds:
+      - ./scripts/vm setup
+
   seed:
-    desc: Populate demo/dev with tracked fake example settings.
+    desc: Populate the existing demo/dev config with tracked fake files.
     preconditions:
       - sh: test '{{.ARG_COUNT}}' -eq 2
         msg: 'seed requires demo dev; example: task seed -- demo dev'
@@ -140,16 +167,20 @@ tasks:
     cmds:
       - ./scripts/vm seed "$VM_VPN_PRODUCT" "$VM_VPN_ENVIRONMENT"
 
-  config-path:
-    desc: Print the host settings path for <product> <environment>.
-    preconditions:
-      - sh: test '{{.ARG_COUNT}}' -eq 2
-        msg: 'config-path requires <product> <environment>; example: task config-path -- demo dev'
-    env:
-      VM_VPN_PRODUCT: '{{.PRODUCT}}'
-      VM_VPN_ENVIRONMENT: '{{.ENVIRONMENT}}'
+  clean:
+    desc: Permanently delete hidden runtimes that have no matching config.
     cmds:
-      - ./scripts/vm config-path "$VM_VPN_PRODUCT" "$VM_VPN_ENVIRONMENT"
+      - ./scripts/vm clean
+
+  image:build:
+    desc: Build the internal shared runtime image directly.
+    cmds:
+      - ./scripts/vm image-build
+
+  image:status:
+    desc: Show Tart details for the internal shared runtime image.
+    cmds:
+      - ./scripts/vm image-status
 
   doctor:
     desc: Verify all development-shell tools are available.

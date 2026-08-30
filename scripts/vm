@@ -39,17 +39,15 @@ instance_name() {
 	local environment="$2"
 	validate_component product "$product"
 	validate_component environment "$environment"
-	printf '%s%s-%s\n' "$INSTANCE_PREFIX" "$product" "$environment"
+	printf '%s%s--%s\n' "$INSTANCE_PREFIX" "$product" "$environment"
 }
 
 initialize_workspace() {
 	local config_path="$1"
 	umask 077
 	install -d -m 0700 "$config_path" "$config_path/vpn" "$config_path/bookmarks" "$config_path/shared"
-	if [[ ! -f "$config_path/bookmarks/bookmarks.json" ]]; then
-		printf '[]\n' >"$config_path/bookmarks/bookmarks.json"
-		chmod 0600 "$config_path/bookmarks/bookmarks.json"
-	fi
+	printf '[]\n' >"$config_path/bookmarks/bookmarks.json"
+	chmod 0600 "$config_path/bookmarks/bookmarks.json"
 }
 
 require_workspace() {
@@ -58,76 +56,120 @@ require_workspace() {
 	local config_path
 	config_path="$(workspace_path "$product" "$environment")"
 	[[ -d "$config_path" ]] || fail "configuration is missing; run: task create -- $product $environment"
-	[[ -f "$config_path/bookmarks/bookmarks.json" ]] ||
-		fail "bookmarks file is missing: $config_path/bookmarks/bookmarks.json"
-	jq -e 'type == "array" and all(.[]; (.title | type == "string") and (.url | type == "string"))' \
-		"$config_path/bookmarks/bookmarks.json" >/dev/null || fail "bookmarks.json has an invalid format"
 	printf '%s\n' "$config_path"
 }
 
-build_vm() {
-	[[ -x "$BUILD_SCRIPT" ]] || fail "build script is not executable: $BUILD_SCRIPT"
-	"$BUILD_SCRIPT" "$BASE_VM_NAME"
+bookmarks_state() {
+	local config_path="$1"
+	local bookmarks_file="${config_path}/bookmarks/bookmarks.json"
+	if [[ ! -f "$bookmarks_file" ]]; then
+		printf 'missing\n'
+	elif jq -e 'type == "array" and all(.[]; (.title | type == "string") and (.url | type == "string"))' \
+		"$bookmarks_file" >/dev/null 2>&1; then
+		printf 'valid\n'
+	else
+		printf 'invalid\n'
+	fi
 }
 
-create_vm() {
+vpn_state() {
+	local config_path="$1"
+	if [[ -s "${config_path}/vpn/profile.ovpn" ]]; then
+		printf 'present\n'
+	else
+		printf 'missing\n'
+	fi
+}
+
+runtime_state() {
+	local vm_name="$1"
+	local details
+	if ! details="$(tart get "$vm_name" 2>/dev/null)"; then
+		printf 'not-created\n'
+		return 0
+	fi
+	printf '%s\n' "$details" | tail -n 1 | awk '{ print $NF }'
+}
+
+create_config() {
+	local config_path
+	config_path="$(workspace_path "$1" "$2")"
+	[[ ! -e "$config_path" ]] || fail "configuration already exists: $1/$2"
+	initialize_workspace "$config_path"
+	printf 'created configuration %s/%s at %s\n' "$1" "$2" "$config_path"
+}
+
+start_config() {
 	local product="$1"
 	local environment="$2"
-	local config_path vm_name
-	config_path="$(workspace_path "$product" "$environment")"
+	local config_path vm_name bookmark_status
+	config_path="$(require_workspace "$product" "$environment")"
+	bookmark_status="$(bookmarks_state "$config_path")"
+	[[ "$bookmark_status" == "valid" ]] || fail "bookmarks are $bookmark_status; run: task validate -- $product $environment"
 	vm_name="$(instance_name "$product" "$environment")"
 	require_command tart
-	tart get "$BASE_VM_NAME" >/dev/null 2>&1 || fail "base VM is missing; run: task build"
-	if tart get "$vm_name" >/dev/null 2>&1; then
-		fail "$vm_name already exists"
+	tart get "$BASE_VM_NAME" >/dev/null 2>&1 || fail "runtime image is unavailable; run: task setup"
+	if ! tart get "$vm_name" >/dev/null 2>&1; then
+		tart clone "$BASE_VM_NAME" "$vm_name"
 	fi
-	initialize_workspace "$config_path"
-	tart clone "$BASE_VM_NAME" "$vm_name"
-	printf 'created %s with configuration at %s\n' "$vm_name" "$config_path"
+	printf 'starting configuration %s/%s\n' "$product" "$environment"
+	exec tart run "$vm_name" --dir "$config_path:ro,tag=workspace"
 }
 
-start_vm() {
+stop_config() {
+	local vm_name
+	vm_name="$(instance_name "$1" "$2")"
+	require_workspace "$1" "$2" >/dev/null
+	require_command tart
+	tart get "$vm_name" >/dev/null 2>&1 || fail "configuration is not running and has no runtime"
+	tart stop "$vm_name"
+}
+
+delete_config() {
 	local product="$1"
 	local environment="$2"
 	local config_path vm_name
 	config_path="$(require_workspace "$product" "$environment")"
 	vm_name="$(instance_name "$product" "$environment")"
 	require_command tart
-	tart get "$vm_name" >/dev/null 2>&1 || fail "VM is missing; run: task create -- $product $environment"
-	printf 'starting %s with %s/%s\n' "$vm_name" "$product" "$environment"
-	exec tart run "$vm_name" --dir "$config_path:ro,tag=workspace"
+	if tart get "$vm_name" >/dev/null 2>&1; then
+		tart stop "$vm_name" >/dev/null 2>&1 || true
+		tart delete "$vm_name"
+	fi
+	rm -rf -- "$config_path"
+	printf 'deleted configuration %s/%s and its runtime\n' "$product" "$environment"
 }
 
-stop_vm() {
-	local vm_name
-	vm_name="$(instance_name "$1" "$2")"
-	require_command tart
-	tart get "$vm_name" >/dev/null 2>&1 || fail "VM is missing: $vm_name"
-	tart stop "$vm_name"
+validate_config() {
+	local product="$1"
+	local environment="$2"
+	local config_path bookmark_status vpn_status
+	config_path="$(require_workspace "$product" "$environment")"
+	bookmark_status="$(bookmarks_state "$config_path")"
+	vpn_status="$(vpn_state "$config_path")"
+	printf 'config: %s/%s\nbookmarks: %s\nvpn: %s\npath: %s\n' \
+		"$product" "$environment" "$bookmark_status" "$vpn_status" "$config_path"
+	[[ "$bookmark_status" == "valid" ]]
 }
 
-delete_vm() {
-	local vm_name
-	vm_name="$(instance_name "$1" "$2")"
+status_config() {
+	local product="$1"
+	local environment="$2"
+	local config_path vm_name
+	config_path="$(require_workspace "$product" "$environment")"
+	vm_name="$(instance_name "$product" "$environment")"
 	require_command tart
-	tart get "$vm_name" >/dev/null 2>&1 || fail "VM is missing: $vm_name"
-	tart stop "$vm_name" >/dev/null 2>&1 || true
-	tart delete "$vm_name"
-	printf 'deleted %s; host configuration was preserved\n' "$vm_name"
-}
-
-status_vm() {
-	local vm_name
-	vm_name="$(instance_name "$1" "$2")"
-	require_command tart
-	tart get "$vm_name"
+	printf 'config: %s/%s\nruntime: %s\nvpn: %s\nbookmarks: %s\npath: %s\n' \
+		"$product" "$environment" "$(runtime_state "$vm_name")" "$(vpn_state "$config_path")" \
+		"$(bookmarks_state "$config_path")" "$config_path"
 }
 
 list_configs() {
-	printf 'PRODUCT\tENVIRONMENT\tCONFIGURATION\n'
+	require_command tart
+	printf 'CONFIG\tSTATE\tVPN\tBOOKMARKS\n'
 	[[ -d "$CONFIG_ROOT" ]] || return 0
 
-	local product_path environment_path product environment
+	local product_path environment_path product environment vm_name
 	shopt -s nullglob
 	for product_path in "$CONFIG_ROOT"/*; do
 		[[ -d "$product_path" ]] || continue
@@ -137,8 +179,9 @@ list_configs() {
 			[[ -d "$environment_path" ]] || continue
 			environment="${environment_path##*/}"
 			[[ "$environment" =~ ^[a-z0-9]+(-[a-z0-9]+)*$ ]] || continue
-			[[ -f "$environment_path/bookmarks/bookmarks.json" ]] || continue
-			printf '%s\t%s\t%s\n' "$product" "$environment" "$environment_path"
+			vm_name="$(instance_name "$product" "$environment")"
+			printf '%s/%s\t%s\t%s\t%s\n' "$product" "$environment" "$(runtime_state "$vm_name")" \
+				"$(vpn_state "$environment_path")" "$(bookmarks_state "$environment_path")"
 		done
 	done
 }
@@ -148,7 +191,35 @@ stop_all() {
 	local vm_name
 	while IFS= read -r vm_name; do
 		[[ -n "$vm_name" ]] && tart stop "$vm_name"
-	done < <(tart list | awk -v prefix="$INSTANCE_PREFIX" '{ for (field = 1; field <= NF; field++) if (index($field, prefix) == 1 && $field != "vm-vpn-base") print $field }')
+	done < <(managed_instance_names)
+}
+
+managed_instance_names() {
+	tart list | awk -v prefix="$INSTANCE_PREFIX" '
+    {
+      for (field = 1; field <= NF; field++) {
+        if (index($field, prefix) == 1 && $field != "vm-vpn-base" && index($field, "--") > 0) {
+          print $field
+        }
+      }
+    }
+  '
+}
+
+clean_orphans() {
+	require_command tart
+	local vm_name identity product environment config_path
+	while IFS= read -r vm_name; do
+		[[ -n "$vm_name" ]] || continue
+		identity="${vm_name#"$INSTANCE_PREFIX"}"
+		product="${identity%%--*}"
+		environment="${identity#*--}"
+		config_path="$(workspace_path "$product" "$environment")"
+		[[ -d "$config_path" ]] && continue
+		tart stop "$vm_name" >/dev/null 2>&1 || true
+		tart delete "$vm_name"
+		printf 'deleted orphan runtime for %s/%s\n' "$product" "$environment"
+	done < <(managed_instance_names)
 }
 
 seed_demo() {
@@ -156,13 +227,31 @@ seed_demo() {
 	local environment="$2"
 	[[ "$product/$environment" == "demo/dev" ]] || fail "only demo/dev has tracked example data"
 	local config_path
-	config_path="$(workspace_path "$product" "$environment")"
-	[[ -d "$config_path" ]] || fail "configuration is missing; run: task create -- demo dev"
+	config_path="$(require_workspace "$product" "$environment")"
 	cp "${REPO_ROOT}/examples/demo/dev/vpn/profile.ovpn" "$config_path/vpn/profile.ovpn"
 	cp "${REPO_ROOT}/examples/demo/dev/bookmarks/bookmarks.json" "$config_path/bookmarks/bookmarks.json"
 	cp "${REPO_ROOT}/examples/demo/dev/certs/demo-ca.crt" "$config_path/shared/demo-ca.crt"
 	chmod 0600 "$config_path/vpn/profile.ovpn" "$config_path/bookmarks/bookmarks.json" "$config_path/shared/demo-ca.crt"
 	printf 'seeded demo/dev at %s\n' "$config_path"
+}
+
+build_image() {
+	[[ -x "$BUILD_SCRIPT" ]] || fail "build script is not executable: $BUILD_SCRIPT"
+	"$BUILD_SCRIPT" "$BASE_VM_NAME"
+}
+
+setup_runtime() {
+	require_command tart
+	if tart get "$BASE_VM_NAME" >/dev/null 2>&1; then
+		printf 'runtime image is ready\n'
+	else
+		build_image
+	fi
+}
+
+image_status() {
+	require_command tart
+	tart get "$BASE_VM_NAME"
 }
 
 doctor() {
@@ -176,29 +265,33 @@ doctor() {
 main() {
 	local command_name="${1:-}"
 	case "$command_name" in
-	build)
-		[[ $# -eq 1 ]] || fail "usage: task build"
-		build_vm
-		;;
 	create)
 		[[ $# -eq 3 ]] || fail "usage: task create -- <product> <environment>"
-		create_vm "$2" "$3"
+		create_config "$2" "$3"
 		;;
 	start)
 		[[ $# -eq 3 ]] || fail "usage: task start -- <product> <environment>"
-		start_vm "$2" "$3"
+		start_config "$2" "$3"
 		;;
 	stop)
 		[[ $# -eq 3 ]] || fail "usage: task stop -- <product> <environment>"
-		stop_vm "$2" "$3"
+		stop_config "$2" "$3"
 		;;
 	delete)
 		[[ $# -eq 3 ]] || fail "usage: task delete -- <product> <environment>"
-		delete_vm "$2" "$3"
+		delete_config "$2" "$3"
 		;;
 	status)
 		[[ $# -eq 3 ]] || fail "usage: task status -- <product> <environment>"
-		status_vm "$2" "$3"
+		status_config "$2" "$3"
+		;;
+	validate)
+		[[ $# -eq 3 ]] || fail "usage: task validate -- <product> <environment>"
+		validate_config "$2" "$3"
+		;;
+	path)
+		[[ $# -eq 3 ]] || fail "usage: task path -- <product> <environment>"
+		workspace_path "$2" "$3"
 		;;
 	list)
 		[[ $# -eq 1 ]] || fail "usage: task list"
@@ -208,13 +301,25 @@ main() {
 		[[ $# -eq 1 ]] || fail "usage: task stop-all"
 		stop_all
 		;;
+	clean)
+		[[ $# -eq 1 ]] || fail "usage: task clean"
+		clean_orphans
+		;;
 	seed)
 		[[ $# -eq 3 ]] || fail "usage: task seed -- demo dev"
 		seed_demo "$2" "$3"
 		;;
-	config-path)
-		[[ $# -eq 3 ]] || fail "usage: task config-path -- <product> <environment>"
-		workspace_path "$2" "$3"
+	setup)
+		[[ $# -eq 1 ]] || fail "usage: task setup"
+		setup_runtime
+		;;
+	image-build)
+		[[ $# -eq 1 ]] || fail "usage: task image:build"
+		build_image
+		;;
+	image-status)
+		[[ $# -eq 1 ]] || fail "usage: task image:status"
+		image_status
 		;;
 	doctor)
 		[[ $# -eq 1 ]] || fail "usage: task doctor"
