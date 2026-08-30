@@ -63,23 +63,23 @@ cd vm-vpn
 direnv allow
 ```
 
-The `.envrc` loads the flake automatically. The `vm` wrapper, Packer, Tart,
+The `.envrc` loads the flake automatically. Task, Packer, Tart,
 tests, formatters, and shell tools are then on `PATH` whenever this directory is
 entered. The commands below deliberately contain no `nix develop` prefix.
 
 Verify the command environment:
 
 ```console
-vm doctor
+task doctor
 ```
 
 ## 3. Build the reusable base
 
 ```console
-vm build
+task build
 ```
 
-`vm build` wraps Packer and Tart. It downloads the Cirrus image, builds
+`task build` wraps Packer and Tart. It downloads the Cirrus image, builds
 `vm-vpn-base`, installs and configures the applications, seals the image, and
 stops it. It refuses to overwrite an existing base.
 
@@ -91,9 +91,9 @@ or Tart. Grant it so provisioning can communicate with the guest.
 Create one persistent instance for each product and environment:
 
 ```console
-vm create demo dev
-vm create demo staging
-vm create demo prod
+task create -- demo dev
+task create -- demo staging
+task create -- demo prod
 ```
 
 `create` clones `vm-vpn-base` and creates the corresponding protected settings
@@ -129,7 +129,7 @@ Bookmarks use this format:
 To populate `demo/dev` with tracked, non-secret examples after creating it:
 
 ```console
-vm seed demo dev
+task seed -- demo dev
 ```
 
 The example VPN profile is intentionally non-functional. Never commit actual
@@ -140,9 +140,9 @@ VPN profiles, private keys, passwords, or credentials.
 Start any or all instances:
 
 ```console
-vm start demo dev
-vm start demo staging
-vm start demo prod
+task start -- demo dev
+task start -- demo staging
+task start -- demo prod
 ```
 
 Each `start` command owns its Tart window and remains attached while that VM is
@@ -169,14 +169,14 @@ macOS and application state between starts.
 ## VM lifecycle commands
 
 ```console
-vm build
-vm create <product> <environment>
-vm start <product> <environment>
-vm stop <product> <environment>
-vm delete <product> <environment>
-vm status <product> <environment>
-vm list
-vm stop-all
+task build
+task create -- <product> <environment>
+task start -- <product> <environment>
+task stop -- <product> <environment>
+task delete -- <product> <environment>
+task status -- <product> <environment>
+task list
+task stop-all
 ```
 
 - `build` creates the reusable `vm-vpn-base` image.
@@ -193,15 +193,20 @@ vm stop-all
 ## Other wrapper commands
 
 ```console
-vm seed demo dev
-vm config-path <product> <environment>
-vm doctor
-vm check
-vm --help
+task seed -- demo dev
+task config-path -- <product> <environment>
+task doctor
+task check
+task help
 ```
 
-`vm check` runs the test, lint, formatting, and flake quality gates using tools
+`task check` runs the test, lint, formatting, and flake quality gates using tools
 provided by the automatically loaded development shell.
+
+Run `task help` for explanations of every command and argument. Running bare
+`task` shows the same guide because `help` is the default task. In commands that
+accept a product and environment, `--` tells Task to forward the remaining
+values as arguments.
 
 Real AWS authentication, SAML browser handoff, DNS, private routes, and internal
 resources still require an interactive acceptance test with a real profile.

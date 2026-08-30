@@ -46,19 +46,16 @@ EOF
 	chmod 0755 "${VM_VPN_BUILD_SCRIPT}"
 }
 
-@test "help describes the reusable-base multi-VM workflow" {
-	run "${VM_SCRIPT}" --help
-	[ "${status}" -eq 0 ]
-	[[ "${output}" == *"vm build"* ]]
-	[[ "${output}" == *"vm create <product> <environment>"* ]]
-	[[ "${output}" == *"vm delete <product> <environment>"* ]]
-	[[ "${output}" == *"vm start <product> <environment>"* ]]
-}
-
 @test "build creates only the reusable base image" {
 	run "${VM_SCRIPT}" build
 	[ "${status}" -eq 0 ]
 	[ "$(<"${TART_LOG}.build")" = "vm-vpn-base" ]
+}
+
+@test "Task routes create arguments to the internal VM implementation" {
+	run task --taskfile "${REPO_ROOT}/Taskfile.yml" create -- demo dev
+	[ "${status}" -eq 0 ]
+	grep -Fxq 'clone vm-vpn-base vm-vpn-demo-dev' "${TART_LOG}"
 }
 
 @test "create makes protected host configuration and a persistent clone" {
@@ -96,7 +93,7 @@ EOF
 @test "start rejects a missing or unsafe instance" {
 	run "${VM_SCRIPT}" start demo dev
 	[ "${status}" -ne 0 ]
-	[[ "${output}" == *"vm create demo dev"* ]]
+	[[ "${output}" == *"task create -- demo dev"* ]]
 
 	run "${VM_SCRIPT}" create '../demo' dev
 	[ "${status}" -ne 0 ]
@@ -130,4 +127,8 @@ EOF
 	[ "${status}" -eq 0 ]
 	grep -Fxq 'stop vm-vpn-demo-dev' "${TART_LOG}"
 	grep -Fxq 'stop vm-vpn-demo-prod' "${TART_LOG}"
+}
+
+@test "doctor includes Task in its development-shell checks" {
+	grep -Fq 'bats direnv jq nix packer shellcheck shfmt sshpass tart task' "${VM_SCRIPT}"
 }

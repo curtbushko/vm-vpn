@@ -9,29 +9,6 @@ readonly REPO_ROOT
 readonly CONFIG_ROOT="${VM_VPN_CONFIG_HOME:-${XDG_CONFIG_HOME:-${HOME}/.config}/vm-vpn}"
 readonly BUILD_SCRIPT="${VM_VPN_BUILD_SCRIPT:-${REPO_ROOT}/macos/scripts/build-image}"
 
-usage() {
-	cat <<'EOF'
-Usage:
-  vm build
-  vm create <product> <environment>
-  vm start <product> <environment>
-  vm stop <product> <environment>
-  vm delete <product> <environment>
-  vm status <product> <environment>
-  vm list
-  vm stop-all
-  vm seed demo dev
-  vm config-path <product> <environment>
-  vm doctor
-  vm check
-  vm --help
-
-The command builds one reusable Tart image named vm-vpn-base. Each create
-clones that base into vm-vpn-<product>-<environment>. Instances can start
-concurrently with separate ~/.config/vm-vpn/<product>/<environment> mounts.
-EOF
-}
-
 fail() {
 	printf 'vm: %s\n' "$*" >&2
 	exit 1
@@ -80,7 +57,7 @@ require_workspace() {
 	local environment="$2"
 	local config_path
 	config_path="$(workspace_path "$product" "$environment")"
-	[[ -d "$config_path" ]] || fail "configuration is missing; run: vm create $product $environment"
+	[[ -d "$config_path" ]] || fail "configuration is missing; run: task create -- $product $environment"
 	[[ -f "$config_path/bookmarks/bookmarks.json" ]] ||
 		fail "bookmarks file is missing: $config_path/bookmarks/bookmarks.json"
 	jq -e 'type == "array" and all(.[]; (.title | type == "string") and (.url | type == "string"))' \
@@ -100,7 +77,7 @@ create_vm() {
 	config_path="$(workspace_path "$product" "$environment")"
 	vm_name="$(instance_name "$product" "$environment")"
 	require_command tart
-	tart get "$BASE_VM_NAME" >/dev/null 2>&1 || fail "base VM is missing; run: vm build"
+	tart get "$BASE_VM_NAME" >/dev/null 2>&1 || fail "base VM is missing; run: task build"
 	if tart get "$vm_name" >/dev/null 2>&1; then
 		fail "$vm_name already exists"
 	fi
@@ -116,7 +93,7 @@ start_vm() {
 	config_path="$(require_workspace "$product" "$environment")"
 	vm_name="$(instance_name "$product" "$environment")"
 	require_command tart
-	tart get "$vm_name" >/dev/null 2>&1 || fail "VM is missing; run: vm create $product $environment"
+	tart get "$vm_name" >/dev/null 2>&1 || fail "VM is missing; run: task create -- $product $environment"
 	printf 'starting %s with %s/%s\n' "$vm_name" "$product" "$environment"
 	exec tart run "$vm_name" --dir "$config_path:ro,tag=workspace"
 }
@@ -165,7 +142,7 @@ seed_demo() {
 	[[ "$product/$environment" == "demo/dev" ]] || fail "only demo/dev has tracked example data"
 	local config_path
 	config_path="$(workspace_path "$product" "$environment")"
-	[[ -d "$config_path" ]] || fail "configuration is missing; run: vm create demo dev"
+	[[ -d "$config_path" ]] || fail "configuration is missing; run: task create -- demo dev"
 	cp "${REPO_ROOT}/examples/demo/dev/vpn/profile.ovpn" "$config_path/vpn/profile.ovpn"
 	cp "${REPO_ROOT}/examples/demo/dev/bookmarks/bookmarks.json" "$config_path/bookmarks/bookmarks.json"
 	cp "${REPO_ROOT}/examples/demo/dev/certs/demo-ca.crt" "$config_path/shared/demo-ca.crt"
@@ -175,68 +152,61 @@ seed_demo() {
 
 doctor() {
 	local command_name
-	for command_name in bats direnv jq nix packer shellcheck shfmt sshpass tart; do
+	for command_name in bats direnv jq nix packer shellcheck shfmt sshpass tart task; do
 		require_command "$command_name"
 	done
 	printf 'vm: development environment is ready\n'
 }
 
 main() {
-	local command_name="${1:---help}"
+	local command_name="${1:-}"
 	case "$command_name" in
-	-h | --help | help)
-		usage
-		;;
 	build)
-		[[ $# -eq 1 ]] || fail "usage: vm build"
+		[[ $# -eq 1 ]] || fail "usage: task build"
 		build_vm
 		;;
 	create)
-		[[ $# -eq 3 ]] || fail "usage: vm create <product> <environment>"
+		[[ $# -eq 3 ]] || fail "usage: task create -- <product> <environment>"
 		create_vm "$2" "$3"
 		;;
 	start)
-		[[ $# -eq 3 ]] || fail "usage: vm start <product> <environment>"
+		[[ $# -eq 3 ]] || fail "usage: task start -- <product> <environment>"
 		start_vm "$2" "$3"
 		;;
 	stop)
-		[[ $# -eq 3 ]] || fail "usage: vm stop <product> <environment>"
+		[[ $# -eq 3 ]] || fail "usage: task stop -- <product> <environment>"
 		stop_vm "$2" "$3"
 		;;
 	delete)
-		[[ $# -eq 3 ]] || fail "usage: vm delete <product> <environment>"
+		[[ $# -eq 3 ]] || fail "usage: task delete -- <product> <environment>"
 		delete_vm "$2" "$3"
 		;;
 	status)
-		[[ $# -eq 3 ]] || fail "usage: vm status <product> <environment>"
+		[[ $# -eq 3 ]] || fail "usage: task status -- <product> <environment>"
 		status_vm "$2" "$3"
 		;;
 	list)
-		[[ $# -eq 1 ]] || fail "usage: vm list"
+		[[ $# -eq 1 ]] || fail "usage: task list"
 		list_vms
 		;;
 	stop-all)
-		[[ $# -eq 1 ]] || fail "usage: vm stop-all"
+		[[ $# -eq 1 ]] || fail "usage: task stop-all"
 		stop_all
 		;;
 	seed)
-		[[ $# -eq 3 ]] || fail "usage: vm seed demo dev"
+		[[ $# -eq 3 ]] || fail "usage: task seed -- demo dev"
 		seed_demo "$2" "$3"
 		;;
 	config-path)
-		[[ $# -eq 3 ]] || fail "usage: vm config-path <product> <environment>"
+		[[ $# -eq 3 ]] || fail "usage: task config-path -- <product> <environment>"
 		workspace_path "$2" "$3"
 		;;
 	doctor)
-		[[ $# -eq 1 ]] || fail "usage: vm doctor"
+		[[ $# -eq 1 ]] || fail "usage: task doctor"
 		doctor
 		;;
-	check)
-		[[ $# -eq 1 ]] || fail "usage: vm check"
-		"${REPO_ROOT}/scripts/ci-check"
-		;;
 	*)
-		fail "unknown command: $command_name"
+		fail "unknown internal command: ${command_name:-<empty>}; run task help"
 		;;
 	esac
 }

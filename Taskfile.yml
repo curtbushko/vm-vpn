@@ -1,0 +1,162 @@
+version: '3'
+
+vars:
+  ARG_COUNT: '{{len .CLI_ARGS_LIST}}'
+  PRODUCT: '{{if gt (len .CLI_ARGS_LIST) 0}}{{index .CLI_ARGS_LIST 0}}{{end}}'
+  ENVIRONMENT: '{{if gt (len .CLI_ARGS_LIST) 1}}{{index .CLI_ARGS_LIST 1}}{{end}}'
+
+tasks:
+  default:
+    desc: Show the project command guide.
+    silent: true
+    cmds:
+      - task: help
+
+  help:
+    desc: Explain every project command and its arguments.
+    silent: true
+    cmds:
+      - |
+        printf '%s\n' \
+          'Usage:' \
+          '  task build' \
+          '  task create -- <product> <environment>' \
+          '  task start -- <product> <environment>' \
+          '  task stop -- <product> <environment>' \
+          '  task delete -- <product> <environment>' \
+          '  task status -- <product> <environment>' \
+          '  task list' \
+          '  task stop-all' \
+          '  task seed -- demo dev' \
+          '  task config-path -- <product> <environment>' \
+          '  task doctor' \
+          '  task check' \
+          '  task help' \
+          '' \
+          'Arguments:' \
+          '  product       Logical workspace or service name, such as demo.' \
+          '  environment   Deployment environment, such as dev, staging, or prod.' \
+          '                Both accept lowercase letters, numbers, and internal hyphens.' \
+          '' \
+          'Commands:' \
+          '  build         Build and seal the reusable vm-vpn-base Tart image.' \
+          '  create        Clone the base and initialize host settings for one VM.' \
+          '  start         Start one VM with its matching host settings mounted.' \
+          '  stop          Stop one VM while preserving its disk and host settings.' \
+          '  delete        Stop and delete one clone; preserve its host settings.' \
+          '  status        Show Tart details and running state for one VM.' \
+          '  list          List all managed VM clones.' \
+          '  stop-all      Stop every managed clone without deleting any clone.' \
+          '  seed          Copy tracked fake VPN, bookmark, and shared demo files.' \
+          '  config-path   Print a configuration directory under ~/.config/vm-vpn.' \
+          '  doctor        Verify all development-shell tools are available.' \
+          '  check         Run tests, lint, formatting, and Nix flake validation.' \
+          '  help          Show this guide; it is also the default task.' \
+          '' \
+          'Examples:' \
+          '  task create -- demo dev' \
+          '  task start -- demo dev' \
+          '  task delete -- demo dev'
+
+  build:
+    desc: Build and seal the reusable vm-vpn-base Tart image.
+    cmds:
+      - ./scripts/vm build
+
+  create:
+    desc: Clone the base for <product> <environment> and initialize host settings.
+    preconditions:
+      - sh: test '{{.ARG_COUNT}}' -eq 2
+        msg: 'create requires <product> <environment>; example: task create -- demo dev'
+    env:
+      VM_VPN_PRODUCT: '{{.PRODUCT}}'
+      VM_VPN_ENVIRONMENT: '{{.ENVIRONMENT}}'
+    cmds:
+      - ./scripts/vm create "$VM_VPN_PRODUCT" "$VM_VPN_ENVIRONMENT"
+
+  start:
+    desc: Start <product> <environment> with its host settings mounted.
+    interactive: true
+    preconditions:
+      - sh: test '{{.ARG_COUNT}}' -eq 2
+        msg: 'start requires <product> <environment>; example: task start -- demo dev'
+    env:
+      VM_VPN_PRODUCT: '{{.PRODUCT}}'
+      VM_VPN_ENVIRONMENT: '{{.ENVIRONMENT}}'
+    cmds:
+      - ./scripts/vm start "$VM_VPN_PRODUCT" "$VM_VPN_ENVIRONMENT"
+
+  stop:
+    desc: Stop <product> <environment> without deleting it.
+    preconditions:
+      - sh: test '{{.ARG_COUNT}}' -eq 2
+        msg: 'stop requires <product> <environment>; example: task stop -- demo dev'
+    env:
+      VM_VPN_PRODUCT: '{{.PRODUCT}}'
+      VM_VPN_ENVIRONMENT: '{{.ENVIRONMENT}}'
+    cmds:
+      - ./scripts/vm stop "$VM_VPN_PRODUCT" "$VM_VPN_ENVIRONMENT"
+
+  delete:
+    desc: Delete the <product> <environment> clone but preserve host settings.
+    preconditions:
+      - sh: test '{{.ARG_COUNT}}' -eq 2
+        msg: 'delete requires <product> <environment>; example: task delete -- demo dev'
+    env:
+      VM_VPN_PRODUCT: '{{.PRODUCT}}'
+      VM_VPN_ENVIRONMENT: '{{.ENVIRONMENT}}'
+    cmds:
+      - ./scripts/vm delete "$VM_VPN_PRODUCT" "$VM_VPN_ENVIRONMENT"
+
+  status:
+    desc: Show Tart details for <product> <environment>.
+    preconditions:
+      - sh: test '{{.ARG_COUNT}}' -eq 2
+        msg: 'status requires <product> <environment>; example: task status -- demo dev'
+    env:
+      VM_VPN_PRODUCT: '{{.PRODUCT}}'
+      VM_VPN_ENVIRONMENT: '{{.ENVIRONMENT}}'
+    cmds:
+      - ./scripts/vm status "$VM_VPN_PRODUCT" "$VM_VPN_ENVIRONMENT"
+
+  list:
+    desc: List all managed VM clones.
+    cmds:
+      - ./scripts/vm list
+
+  stop-all:
+    desc: Stop all managed VM clones without deleting them.
+    cmds:
+      - ./scripts/vm stop-all
+
+  seed:
+    desc: Populate demo/dev with tracked fake example settings.
+    preconditions:
+      - sh: test '{{.ARG_COUNT}}' -eq 2
+        msg: 'seed requires demo dev; example: task seed -- demo dev'
+    env:
+      VM_VPN_PRODUCT: '{{.PRODUCT}}'
+      VM_VPN_ENVIRONMENT: '{{.ENVIRONMENT}}'
+    cmds:
+      - ./scripts/vm seed "$VM_VPN_PRODUCT" "$VM_VPN_ENVIRONMENT"
+
+  config-path:
+    desc: Print the host settings path for <product> <environment>.
+    preconditions:
+      - sh: test '{{.ARG_COUNT}}' -eq 2
+        msg: 'config-path requires <product> <environment>; example: task config-path -- demo dev'
+    env:
+      VM_VPN_PRODUCT: '{{.PRODUCT}}'
+      VM_VPN_ENVIRONMENT: '{{.ENVIRONMENT}}'
+    cmds:
+      - ./scripts/vm config-path "$VM_VPN_PRODUCT" "$VM_VPN_ENVIRONMENT"
+
+  doctor:
+    desc: Verify all development-shell tools are available.
+    cmds:
+      - ./scripts/vm doctor
+
+  check:
+    desc: Run tests, lint, formatting, and Nix flake validation.
+    cmds:
+      - ./scripts/ci-check

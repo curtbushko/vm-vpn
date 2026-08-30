@@ -197,10 +197,10 @@ setup() {
 }
 
 @test "README documents the VM wrapper workflow" {
-	grep -Fq 'vm build' "${REPO_ROOT}/README.md"
-	grep -Fq 'vm create <product> <environment>' "${REPO_ROOT}/README.md"
-	grep -Fq 'vm delete <product> <environment>' "${REPO_ROOT}/README.md"
-	grep -Fq 'vm start <product> <environment>' "${REPO_ROOT}/README.md"
+	grep -Fq 'task build' "${REPO_ROOT}/README.md"
+	grep -Fq 'task create -- <product> <environment>' "${REPO_ROOT}/README.md"
+	grep -Fq 'task delete -- <product> <environment>' "${REPO_ROOT}/README.md"
+	grep -Fq 'task start -- <product> <environment>' "${REPO_ROOT}/README.md"
 	grep -Fq 'Firefox' "${REPO_ROOT}/README.md"
 	grep -Fq 'Ghostty' "${REPO_ROOT}/README.md"
 	grep -Fq 'AWS VPN Client' "${REPO_ROOT}/README.md"
@@ -217,9 +217,9 @@ setup() {
 	grep -Fq '24 GB' "${REPO_ROOT}/README.md"
 	grep -Fq '28 GB' "${REPO_ROOT}/README.md"
 	grep -Fq 'Local Network' "${REPO_ROOT}/README.md"
-	grep -Fq 'vm create demo dev' "${REPO_ROOT}/README.md"
-	grep -Fq 'vm create demo staging' "${REPO_ROOT}/README.md"
-	grep -Fq 'vm create demo prod' "${REPO_ROOT}/README.md"
+	grep -Fq 'task create -- demo dev' "${REPO_ROOT}/README.md"
+	grep -Fq 'task create -- demo staging' "${REPO_ROOT}/README.md"
+	grep -Fq 'task create -- demo prod' "${REPO_ROOT}/README.md"
 	grep -Fq 'vm-vpn-base' "${REPO_ROOT}/README.md"
 	grep -Fq 'run concurrently' "${REPO_ROOT}/README.md"
 	grep -Fq 'separate terminal' "${REPO_ROOT}/README.md"
