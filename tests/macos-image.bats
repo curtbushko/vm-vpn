@@ -190,6 +190,12 @@ setup() {
 	grep -Fq 'shfmt -d macos/scripts/* scripts/ci-check scripts/vm' "${REPO_ROOT}/scripts/ci-check"
 }
 
+@test "development shell inherits Darwin OpenSSH for Apple SSH options" {
+	run grep -F 'darwinPkgs.openssh' "${REPO_ROOT}/flake.nix"
+	[ "${status}" -ne 0 ]
+	grep -Fq '/usr/bin/ssh' "${REPO_ROOT}/macos/scripts/bootstrap-guest-agent"
+}
+
 @test "flake contains no Linux image build outputs" {
 	run grep -E 'nixosConfigurations|aarch64-linux|demo-dev-installer|aws-vpn-client' "${REPO_ROOT}/flake.nix"
 	[ "${status}" -ne 0 ]

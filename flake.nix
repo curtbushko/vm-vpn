@@ -37,7 +37,6 @@
           darwinPkgs.go-task
           darwinPkgs.jq
           darwinPkgs.nixfmt
-          darwinPkgs.openssh
           darwinPkgs.packer
           darwinPkgs.ripgrep
           darwinPkgs.shellcheck
