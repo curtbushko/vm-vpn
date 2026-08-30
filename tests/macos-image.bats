@@ -228,3 +228,24 @@ setup() {
 	[ "${status}" -ne 0 ]
 	grep -Fq 'fresh-machine acceptance run' "${REPO_ROOT}/README.md"
 }
+
+@test "README leads a new user from a fresh Mac to a visible demo" {
+	readme="${REPO_ROOT}/README.md"
+	grep -Fq '## Fresh-Mac quick start' "$readme"
+	grep -Fq '## Returning-user workflow' "$readme"
+	grep -Fq 'at least 65 GB of free disk space' "$readme"
+	grep -Fq 'task setup' "$readme"
+	grep -Fq 'task create -- demo dev' "$readme"
+	grep -Fq 'task seed -- demo dev' "$readme"
+	grep -Fq 'task validate -- demo dev' "$readme"
+	grep -Fq 'task start -- demo dev' "$readme"
+	grep -Fq 'demo VPN profile is intentionally non-functional' "$readme"
+
+	fresh_line="$(grep -n -F '## Fresh-Mac quick start' "$readme" | cut -d: -f1)"
+	setup_line="$(grep -n -m1 -F 'task setup' "$readme" | cut -d: -f1)"
+	returning_line="$(grep -n -F '## Returning-user workflow' "$readme" | cut -d: -f1)"
+	config_line="$(grep -n -F '## Config locations and format' "$readme" | cut -d: -f1)"
+	[ "$fresh_line" -lt "$setup_line" ]
+	[ "$setup_line" -lt "$returning_line" ]
+	[ "$returning_line" -lt "$config_line" ]
+}

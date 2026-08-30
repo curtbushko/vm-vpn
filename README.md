@@ -5,17 +5,80 @@ Run isolated macOS VPN workspaces from host-managed configurations. Each
 bookmarks, and shared files. Multiple configs can run concurrently; VM images
 and clones are managed internally.
 
-The normal workflow is config-focused:
+## Fresh-Mac quick start
+
+Start with an Apple Silicon Mac and at least 65 GB of free disk space. Initial
+setup downloads the Cirrus Labs Sequoia source and builds the shared runtime;
+it can take a while and uses substantial network bandwidth. Config clones need
+additional space as they diverge from the shared image. Rosetta is not used.
+
+Install Determinate Nix with the official Determinate Systems installer:
+
+```console
+curl --proto '=https' --tlsv1.2 -sSf -L \
+  https://install.determinate.systems/nix | sh -s -- install macos
+```
+
+Open a new terminal and confirm Nix is available:
+
+```console
+nix --version
+```
+
+If another Nix distribution is already installed, use the Determinate Systems
+migration guide instead of installing over it:
+<https://docs.determinate.systems/guides/migrating-from-upstream-nix/>.
+
+Install `direnv` and enable its Zsh hook:
+
+```console
+nix profile install nixpkgs#direnv
+printf '%s\n' 'eval "$(direnv hook zsh)"' >> ~/.zshrc
+exec zsh
+```
+
+Clone the repository and approve its development environment:
+
+```console
+git clone <repository-url>
+cd vm-vpn
+direnv allow
+task doctor
+```
+
+Build the shared runtime once. macOS may request Local Network permission for
+Packer or Tart; grant it so provisioning can communicate with the guest.
+
+```console
+task setup
+```
+
+Then create, populate, validate, and start the included example:
+
+```console
+task create -- demo dev
+task seed -- demo dev
+task validate -- demo dev
+task start -- demo dev
+```
+
+The demo VPN profile is intentionally non-functional, so it cannot establish a
+real VPN connection. It still lets you inspect the VM, Firefox bookmarks,
+Ghostty, AWS VPN Client, and mounted files. Replace the demo profile with a real
+AWS Client VPN profile when testing connectivity.
+
+## Returning-user workflow
+
+After the one-time setup, the everyday workflow is:
 
 ```console
 task list
-task validate -- demo dev
 task start -- demo dev
 task stop -- demo dev
 ```
 
-Run `task help` for the complete command guide. Bare `task` shows the same
-guide.
+Use `task status -- demo dev` when a config does not start as expected. Run
+`task help` for the complete command guide; bare `task` shows the same guide.
 
 ## Config locations and format
 
@@ -143,67 +206,15 @@ task delete -- demo dev
 does not use a trash directory and cannot recover the deleted files. Other
 configs and the shared image are unaffected.
 
-## First-time Mac setup
-
-The host must be an Apple Silicon Mac. Install Determinate Nix with the official
-Determinate Systems installer:
-
-```console
-curl --proto '=https' --tlsv1.2 -sSf -L \
-  https://install.determinate.systems/nix | sh -s -- install macos
-```
-
-Open a new terminal and verify it:
-
-```console
-nix --version
-```
-
-If another Nix distribution is already installed, follow the Determinate
-Systems migration guide instead of installing over it:
-<https://docs.determinate.systems/guides/migrating-from-upstream-nix/>.
-
-Install `direnv` through Nix:
-
-```console
-nix profile install nixpkgs#direnv
-```
-
-For the default macOS Zsh shell, add this hook to `~/.zshrc`:
-
-```sh
-eval "$(direnv hook zsh)"
-```
-
-Open a new terminal, clone this repository, enter it, and approve its
-development environment once:
-
-```console
-git clone <repository-url>
-cd vm-vpn
-direnv allow
-```
-
-The checked-in `.envrc` automatically supplies Task, Packer, Tart, tests,
-formatters, and shell tools whenever the repository is entered. Commands do not
-need a `nix develop` prefix.
-
-Verify the environment and perform the one-time runtime setup:
-
-```console
-task doctor
-task setup
-```
-
-`task setup` is idempotent. It builds the shared macOS runtime image only when
-it is missing. The first build may cause macOS to request Local Network
-permission for Packer or Tart; grant it so provisioning can communicate with
-the guest.
-
 ## Setup and maintenance commands
 
 These commands manage project internals and are not part of the everyday config
 workflow:
+
+The checked-in `.envrc` automatically supplies Task, Packer, Tart, tests,
+formatters, and shell tools whenever the repository is entered. Commands do not
+need a `nix develop` prefix. `task setup` is idempotent and builds the shared
+runtime only when it is missing.
 
 ```console
 task setup
