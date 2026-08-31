@@ -87,14 +87,19 @@ Configs live outside the repository:
 ```text
 ~/.config/vm-vpn/<product>/<environment>/
 ├── vpn/
-│   └── profile.ovpn
+│   ├── corporate.ovpn
+│   └── production.ovpn
 ├── bookmarks/
 │   └── bookmarks.json
 └── shared/
 ```
 
-- `vpn/profile.ovpn` is the AWS Client VPN profile for this config.
-- `bookmarks/bookmarks.json` defines its Firefox bookmark toolbar entries.
+- Every `vpn/*.ovpn` file is imported through the AWS VPN Client CLI. Its
+  filename without `.ovpn` becomes the profile name, so `corporate.ovpn`
+  appears as `corporate`. Profile filenames may contain letters, numbers,
+  dots, underscores, and hyphens.
+- `bookmarks/bookmarks.json` defines its Firefox bookmark toolbar entries and
+  starts with two placeholder entries to edit or replace.
 - `shared/` contains other files that should be mounted read-only.
 
 Bookmark entries use this format:
@@ -102,8 +107,12 @@ Bookmark entries use this format:
 ```json
 [
   {
-    "title": "AWS Client VPN user guide",
-    "url": "https://docs.aws.amazon.com/vpn/latest/clientvpn-user/what-is.html"
+    "title": "Company documentation",
+    "url": "https://docs.example.com/"
+  },
+  {
+    "title": "Service dashboard",
+    "url": "https://dashboard.example.com/"
   }
 ]
 ```
@@ -180,8 +189,10 @@ Each config mounts only its own
 `~/.config/vm-vpn/<product>/<environment>` directory read-only at
 `/Volumes/My Shared Files/workspace`. At guest login, the runtime bootstrap:
 
-- Replaces `~/.config/AWSVPNClient/OpenVpnConfigs/workspace.ovpn` with the
-  mounted `vpn/profile.ovpn`.
+- Imports every mounted `vpn/*.ovpn` file through `aws-vpn-client`, using the
+  filename without `.ovpn` as its profile name. Only profiles previously
+  managed by this bootstrap are removed when mounted files change; manual AWS
+  VPN Client profiles are left alone.
 - Replaces Firefox managed bookmarks with the mounted `bookmarks.json` entries.
 - Makes `shared/` available through the read-only workspace mount.
 

@@ -46,7 +46,18 @@ initialize_workspace() {
 	local config_path="$1"
 	umask 077
 	install -d -m 0700 "$config_path" "$config_path/vpn" "$config_path/bookmarks" "$config_path/shared"
-	printf '[]\n' >"$config_path/bookmarks/bookmarks.json"
+	cat >"$config_path/bookmarks/bookmarks.json" <<'EOF'
+[
+  {
+    "title": "Company documentation",
+    "url": "https://docs.example.com/"
+  },
+  {
+    "title": "Service dashboard",
+    "url": "https://dashboard.example.com/"
+  }
+]
+EOF
 	chmod 0600 "$config_path/bookmarks/bookmarks.json"
 }
 
@@ -74,11 +85,14 @@ bookmarks_state() {
 
 vpn_state() {
 	local config_path="$1"
-	if [[ -s "${config_path}/vpn/profile.ovpn" ]]; then
-		printf 'present\n'
-	else
-		printf 'missing\n'
-	fi
+	local vpn_profile
+	for vpn_profile in "${config_path}"/vpn/*.ovpn; do
+		if [[ -s "$vpn_profile" ]]; then
+			printf 'present\n'
+			return 0
+		fi
+	done
+	printf 'missing\n'
 }
 
 runtime_state() {

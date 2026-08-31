@@ -60,6 +60,7 @@ setup() {
 	grep -Fq 'brew install --cask firefox' "${INSTALL_SCRIPT}"
 	grep -Fq 'brew install --cask ghostty' "${INSTALL_SCRIPT}"
 	grep -Fq 'brew install --cask aws-vpn-client' "${INSTALL_SCRIPT}"
+	grep -Fq '/usr/local/bin/aws-vpn-client' "${INSTALL_SCRIPT}"
 	grep -Fq 'xattr -d com.apple.quarantine' "${INSTALL_SCRIPT}"
 	run grep -F 'xattr -dr' "${INSTALL_SCRIPT}"
 	[ "${status}" -ne 0 ]
@@ -94,10 +95,11 @@ setup() {
 }
 
 @test "macOS bootstrap synchronizes mounted VPN profiles and bookmarks" {
-	grep -Fq '.config/AWSVPNClient/OpenVpnConfigs' "${BOOTSTRAP_SCRIPT}"
+	grep -Fq '/usr/local/bin/aws-vpn-client' "${BOOTSTRAP_SCRIPT}"
 	grep -Fq '/Volumes/My Shared Files/workspace' "${BOOTSTRAP_SCRIPT}"
-	grep -Fq 'vpn/profile.ovpn' "${BOOTSTRAP_SCRIPT}"
-	grep -Fq 'workspace.ovpn' "${BOOTSTRAP_SCRIPT}"
+	grep -Fq 'vpn/*.ovpn' "${BOOTSTRAP_SCRIPT}"
+	grep -Fq 'import-profile --profile-name "$profile_name"' "${BOOTSTRAP_SCRIPT}"
+	grep -Fq 'delete-profile --profile-name "$profile_name"' "${BOOTSTRAP_SCRIPT}"
 	grep -Fq 'ManagedBookmarks' "${BOOTSTRAP_SCRIPT}"
 	grep -Fq 'com.vm-vpn.bootstrap.plist' "${CONFIGURE_SCRIPT}"
 	grep -Fq 'chown "$(id -u):$(id -g)" "${FIREFOX_POLICY_FILE}"' "${CONFIGURE_SCRIPT}"

@@ -18,6 +18,10 @@ brew update
 brew install --cask firefox
 brew install --cask ghostty
 brew install --cask aws-vpn-client
+if [[ ! -x /usr/local/bin/aws-vpn-client ]]; then
+	printf 'install-apps: AWS VPN Client 6.0 or newer is required\n' >&2
+	exit 1
+fi
 
 # Clear only bundle-level quarantine metadata after installation. Recursing
 # into signed application contents can fail on vendor-protected files and is

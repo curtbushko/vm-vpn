@@ -3,19 +3,54 @@
 set -euo pipefail
 
 readonly WORKSPACE_ROOT="${VM_VPN_WORKSPACE_ROOT:-/Volumes/My Shared Files/workspace}"
-readonly VPN_SOURCE="${WORKSPACE_ROOT}/vpn/profile.ovpn"
-readonly VPN_DESTINATION="${VM_VPN_VPN_DESTINATION:-${HOME}/.config/AWSVPNClient/OpenVpnConfigs/workspace.ovpn}"
+readonly AWS_VPN_CLIENT="${VM_VPN_AWS_VPN_CLIENT:-/usr/local/bin/aws-vpn-client}"
 readonly BOOKMARKS_SOURCE="${WORKSPACE_ROOT}/bookmarks/bookmarks.json"
 readonly FIREFOX_POLICY_FILE="${VM_VPN_FIREFOX_POLICY_FILE:-/Library/Application Support/Mozilla/policies.json}"
 readonly STATE_ROOT="${VM_VPN_STATE_ROOT:-${HOME}/.local/state/vm-vpn}"
+readonly VPN_MANIFEST="${STATE_ROOT}/vpn-profiles"
 
 [[ -d "$WORKSPACE_ROOT" ]] || exit 0
 
-install -d -m 0700 "$(dirname "$VPN_DESTINATION")" "$STATE_ROOT"
-if [[ -f "$VPN_SOURCE" ]]; then
-	install -m 0600 "$VPN_SOURCE" "$VPN_DESTINATION"
-else
-	install -m 0600 /dev/null "$VPN_DESTINATION"
+[[ -x "$AWS_VPN_CLIENT" ]] || {
+	printf 'bootstrap-workspace: AWS VPN Client 6.0 or newer is required\n' >&2
+	exit 1
+}
+
+install -d -m 0700 "$STATE_ROOT"
+vpn_sources=()
+desired_vpn_manifest=""
+for vpn_source in "${WORKSPACE_ROOT}"/vpn/*.ovpn; do
+	[[ -f "$vpn_source" ]] || continue
+	profile_name="${vpn_source##*/}"
+	profile_name="${profile_name%.ovpn}"
+	[[ "$profile_name" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]] || {
+		printf 'bootstrap-workspace: invalid VPN profile filename: %s\n' "${vpn_source##*/}" >&2
+		exit 1
+	}
+	vpn_checksum="$(shasum -a 256 "$vpn_source" | awk '{ print $1 }')"
+	vpn_sources+=("$vpn_source")
+	if [[ -n "$desired_vpn_manifest" ]]; then
+		desired_vpn_manifest+=$'\n'
+	fi
+	desired_vpn_manifest+="${vpn_checksum}"$'\t'"${profile_name}"
+done
+
+current_vpn_manifest=""
+if [[ -f "$VPN_MANIFEST" ]]; then
+	current_vpn_manifest="$(<"$VPN_MANIFEST")"
+fi
+if [[ "$current_vpn_manifest" != "$desired_vpn_manifest" ]]; then
+	while IFS=$'\t' read -r _vpn_checksum profile_name; do
+		[[ -n "$profile_name" ]] || continue
+		"$AWS_VPN_CLIENT" delete-profile --profile-name "$profile_name" >/dev/null 2>&1 || true
+	done <<<"$current_vpn_manifest"
+	for vpn_source in "${vpn_sources[@]}"; do
+		profile_name="${vpn_source##*/}"
+		profile_name="${profile_name%.ovpn}"
+		"$AWS_VPN_CLIENT" import-profile --profile-name "$profile_name" --config-path "$vpn_source" >/dev/null
+	done
+	printf '%s\n' "$desired_vpn_manifest" >"$VPN_MANIFEST"
+	chmod 0600 "$VPN_MANIFEST"
 fi
 
 [[ -f "$BOOKMARKS_SOURCE" ]] || exit 0

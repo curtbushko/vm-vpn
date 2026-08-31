@@ -54,7 +54,11 @@ EOF
 	[ -d "${VM_VPN_CONFIG_HOME}/demo/dev/vpn" ]
 	[ -d "${VM_VPN_CONFIG_HOME}/demo/dev/bookmarks" ]
 	[ -d "${VM_VPN_CONFIG_HOME}/demo/dev/shared" ]
-	[ "$(jq -c . "${VM_VPN_CONFIG_HOME}/demo/dev/bookmarks/bookmarks.json")" = "[]" ]
+	[ "$(jq -r 'length' "${VM_VPN_CONFIG_HOME}/demo/dev/bookmarks/bookmarks.json")" -eq 2 ]
+	[ "$(jq -r '.[0].title' "${VM_VPN_CONFIG_HOME}/demo/dev/bookmarks/bookmarks.json")" = "Company documentation" ]
+	[ "$(jq -r '.[0].url' "${VM_VPN_CONFIG_HOME}/demo/dev/bookmarks/bookmarks.json")" = "https://docs.example.com/" ]
+	[ "$(jq -r '.[1].title' "${VM_VPN_CONFIG_HOME}/demo/dev/bookmarks/bookmarks.json")" = "Service dashboard" ]
+	[ "$(jq -r '.[1].url' "${VM_VPN_CONFIG_HOME}/demo/dev/bookmarks/bookmarks.json")" = "https://dashboard.example.com/" ]
 	[ ! -s "${TART_LOG}" ]
 
 	run "${VM_SCRIPT}" create demo dev
@@ -106,7 +110,8 @@ EOF
 	[[ "${output}" == *"bookmarks: valid"* ]]
 	[[ "${output}" == *"vpn: missing"* ]]
 
-	printf 'client\nremote vpn.example.com 443\n' >"${VM_VPN_CONFIG_HOME}/demo/dev/vpn/profile.ovpn"
+	printf 'client\nremote dev.example.com 443\n' >"${VM_VPN_CONFIG_HOME}/demo/dev/vpn/development.ovpn"
+	printf 'client\nremote prod.example.com 443\n' >"${VM_VPN_CONFIG_HOME}/demo/dev/vpn/production.ovpn"
 	run "${VM_SCRIPT}" validate demo dev
 	[ "${status}" -eq 0 ]
 	[[ "${output}" == *"vpn: present"* ]]
