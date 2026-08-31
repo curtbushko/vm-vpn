@@ -16,6 +16,14 @@
             "tart"
           ];
       };
+      packer = darwinPkgs.packer.overrideAttrs (previousAttrs: {
+        postPatch = (previousAttrs.postPatch or "") + ''
+          go mod edit -require=github.com/shoenig/go-m1cpu@v0.2.2
+          export GOPATH="$TMPDIR/go"
+          go mod download github.com/shoenig/go-m1cpu@v0.2.2
+        '';
+        vendorHash = "sha256-D12C9EIQninvNZfqLeJ3+ScijZkAftqO8sFf3JG/qks=";
+      });
       tart = darwinPkgs.callPackage ./packages/tart.nix { };
     in
     {
@@ -37,7 +45,7 @@
           darwinPkgs.go-task
           darwinPkgs.jq
           darwinPkgs.nixfmt
-          darwinPkgs.packer
+          packer
           darwinPkgs.ripgrep
           darwinPkgs.shellcheck
           darwinPkgs.shfmt

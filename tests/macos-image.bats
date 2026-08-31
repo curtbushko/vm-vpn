@@ -185,9 +185,14 @@ setup() {
 
 @test "macOS image tooling is supplied by the Nix development shell" {
 	nix eval --raw "${REPO_ROOT}#devShells.aarch64-darwin.default.name" >/dev/null
-	grep -A30 'devShells.*default' "${REPO_ROOT}/flake.nix" | grep -Fq 'darwinPkgs.packer'
+	grep -A30 'devShells.*default' "${REPO_ROOT}/flake.nix" | grep -Fq 'packer'
 	grep -Fq 'shellcheck macos/scripts/* scripts/ci-check scripts/vm' "${REPO_ROOT}/scripts/ci-check"
 	grep -Fq 'shfmt -d macos/scripts/* scripts/ci-check scripts/vm' "${REPO_ROOT}/scripts/ci-check"
+}
+
+@test "flake overrides Packer with the Apple M5-safe CPU dependency" {
+	grep -Fq 'darwinPkgs.packer.overrideAttrs' "${REPO_ROOT}/flake.nix"
+	grep -Fq 'github.com/shoenig/go-m1cpu@v0.2.2' "${REPO_ROOT}/flake.nix"
 }
 
 @test "development shell inherits Darwin OpenSSH for Apple SSH options" {
