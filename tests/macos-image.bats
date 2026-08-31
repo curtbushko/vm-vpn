@@ -190,9 +190,10 @@ setup() {
 	grep -Fq 'shfmt -d macos/scripts/* scripts/ci-check scripts/vm' "${REPO_ROOT}/scripts/ci-check"
 }
 
-@test "flake overrides Packer with the Apple M5-safe CPU dependency" {
+@test "flake patches Packer's vendored Apple CPU probe for M5" {
 	grep -Fq 'darwinPkgs.packer.overrideAttrs' "${REPO_ROOT}/flake.nix"
-	grep -Fq 'github.com/shoenig/go-m1cpu@v0.2.2' "${REPO_ROOT}/flake.nix"
+	grep -Fq 'postConfigure' "${REPO_ROOT}/flake.nix"
+	grep -Fq 'if (typeRef == NULL)' "${REPO_ROOT}/flake.nix"
 }
 
 @test "development shell inherits Darwin OpenSSH for Apple SSH options" {

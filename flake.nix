@@ -17,12 +17,12 @@
           ];
       };
       packer = darwinPkgs.packer.overrideAttrs (previousAttrs: {
-        postPatch = (previousAttrs.postPatch or "") + ''
-          go mod edit -require=github.com/shoenig/go-m1cpu@v0.2.2
-          export GOPATH="$TMPDIR/go"
-          go mod download github.com/shoenig/go-m1cpu@v0.2.2
+        postConfigure = (previousAttrs.postConfigure or "") + ''
+          substituteInPlace vendor/github.com/shoenig/go-m1cpu/cpu.go \
+            --replace-fail \
+            '// UInt64 getFrequency(CFTypeRef typeRef) {' \
+            $'// UInt64 getFrequency(CFTypeRef typeRef) {\n// if (typeRef == NULL) {\n// return 0;\n// }'
         '';
-        vendorHash = "sha256-D12C9EIQninvNZfqLeJ3+ScijZkAftqO8sFf3JG/qks=";
       });
       tart = darwinPkgs.callPackage ./packages/tart.nix { };
     in
