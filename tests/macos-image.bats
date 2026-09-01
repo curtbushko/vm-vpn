@@ -46,7 +46,7 @@ setup() {
 	grep -Fq 'tart run "$BUILD_VM_NAME" &' "$build_script"
 	[ "$(grep -Fc 'tart run "$BUILD_VM_NAME" &' "$build_script")" -eq 2 ]
 	grep -Fq 'tart exec "$BUILD_VM_NAME" sudo /sbin/shutdown -h now' "$build_script"
-	grep -Fq 'tart exec "$BUILD_VM_NAME" sudo /sbin/shutdown -h now || true' "$build_script"
+	grep -Fq 'tart exec "$BUILD_VM_NAME" sudo /sbin/shutdown -h now 2>/dev/null || true' "$build_script"
 	grep -Fq 'guest did not stop after graceful shutdown' "$build_script"
 	grep -Fq 'tart exec -i "$BUILD_VM_NAME" /bin/bash -s <"${SCRIPT_DIR}/verify-image"' "$build_script"
 	grep -Fq 'tart rename "$BUILD_VM_NAME" "$VM_NAME"' "$build_script"
@@ -115,6 +115,8 @@ setup() {
 }
 
 @test "macOS applications receive workspace defaults" {
+	grep -Fq '/Applications/Firefox.app/Contents/Resources/distribution' "${CONFIGURE_SCRIPT}"
+	grep -Fq 'sudo chown "$(id -u):$(id -g)" "$FIREFOX_POLICY_DIR"' "${CONFIGURE_SCRIPT}"
 	grep -Fq 'Catppuccin Mocha' "${CONFIGURE_SCRIPT}"
 	run grep -F 'vim.opt.background' "${CONFIGURE_SCRIPT}"
 	[ "${status}" -ne 0 ]
@@ -131,12 +133,18 @@ setup() {
 	grep -Fq '"StartPage": "none"' "${CONFIGURE_SCRIPT}"
 	grep -Fq '"NoDefaultBookmarks": true' "${CONFIGURE_SCRIPT}"
 	grep -Fq '"NewTabPage": false' "${CONFIGURE_SCRIPT}"
-	grep -Fq -- '--setDefaultBrowser' "${CONFIGURE_SCRIPT}"
-	grep -Fq 'wait "$default_browser_pid"' "${CONFIGURE_SCRIPT}"
+	grep -Fq 'com.apple.LaunchServices/com.apple.launchservices.secure' "${CONFIGURE_SCRIPT}"
+	grep -Fq 'LSHandlerURLScheme = http' "${CONFIGURE_SCRIPT}"
+	grep -Fq 'LSHandlerURLScheme = https' "${CONFIGURE_SCRIPT}"
+	grep -Fq 'LSHandlerContentType = public.html' "${CONFIGURE_SCRIPT}"
+	grep -Fq 'LSHandlerRoleAll = org.mozilla.firefox' "${CONFIGURE_SCRIPT}"
+	run grep -F -- '--setDefaultBrowser' "${CONFIGURE_SCRIPT}"
+	[ "${status}" -ne 0 ]
 }
 
 @test "macOS bootstrap synchronizes mounted VPN profiles and bookmarks" {
 	grep -Fq 'export PATH="/opt/homebrew/bin:${PATH}"' "${BOOTSTRAP_SCRIPT}"
+	grep -Fq '/Applications/Firefox.app/Contents/Resources/distribution/policies.json' "${BOOTSTRAP_SCRIPT}"
 	grep -Fq '/usr/local/bin/aws-vpn-client' "${BOOTSTRAP_SCRIPT}"
 	grep -Fq '/Volumes/My Shared Files/workspace' "${BOOTSTRAP_SCRIPT}"
 	grep -Fq 'vpn/*.ovpn' "${BOOTSTRAP_SCRIPT}"
@@ -178,6 +186,7 @@ setup() {
 
 @test "macOS sealing disables storage-producing services and clears disposable state" {
 	seal_script="${REPO_ROOT}/macos/scripts/seal-image"
+	grep -Fq 'com.apple.WallpaperAgent' "$seal_script"
 	grep -Fq 'tmutil disable' "${seal_script}"
 	grep -Fq 'AssetCacheManagerUtil deactivate' "${seal_script}"
 	grep -Fq 'mdutil -a -i off' "${seal_script}"

@@ -12,7 +12,7 @@ setup() {
 	export PATH="${BATS_TEST_TMPDIR}/bin:${PATH}"
 	mkdir -p "${BATS_TEST_TMPDIR}/bin"
 	: >"${TART_INSTANCES}"
-	printf 'verified:4\n' >"${VM_VPN_BASE_MARKER}"
+	printf 'verified:9\n' >"${VM_VPN_BASE_MARKER}"
 
 	cat >"${BATS_TEST_TMPDIR}/bin/tart" <<'EOF'
 #!/usr/bin/env bash
@@ -100,7 +100,7 @@ EOF
 	[[ "${output}" == *"runtime: reusing existing runtime"* ]]
 
 	[ "$(grep -Fc 'clone vm-vpn-base vm-vpn-demo-dev' "${TART_LOG}")" -eq 1 ]
-	[ "$(grep -Fc "run vm-vpn-demo-dev --dir ${VM_VPN_CONFIG_HOME}/demo/dev:ro,tag=workspace" "${TART_LOG}")" -eq 2 ]
+	[ "$(grep -Fc "run vm-vpn-demo-dev --dir workspace:${VM_VPN_CONFIG_HOME}/demo/dev:ro" "${TART_LOG}")" -eq 2 ]
 }
 
 @test "start migrates missing appearance and rejects invalid colors" {
@@ -209,7 +209,7 @@ EOF
 	run "${VM_SCRIPT}" setup
 	[ "${status}" -eq 0 ]
 	[ "$(<"${TART_LOG}.build")" = "vm-vpn-base" ]
-	[ "$(<"${VM_VPN_BASE_MARKER}")" = "verified:4" ]
+	[ "$(<"${VM_VPN_BASE_MARKER}")" = "verified:9" ]
 	grep -Fxq 'delete vm-vpn-vault-staging' "${TART_LOG}"
 	grep -Fxq 'delete vm-vpn-demo-dev' "${TART_LOG}"
 	[[ "${output}" == *"removed old runtime for vault/staging; next start will recreate it from the new base image"* ]]
@@ -226,7 +226,7 @@ EOF
 	grep -Fxq 'stop vm-vpn-base' "${TART_LOG}"
 	grep -Fxq 'delete vm-vpn-base' "${TART_LOG}"
 	[ "$(<"${TART_LOG}.build")" = "vm-vpn-base" ]
-	[ "$(<"${VM_VPN_BASE_MARKER}")" = "verified:4" ]
+	[ "$(<"${VM_VPN_BASE_MARKER}")" = "verified:9" ]
 
 	mv "${VM_VPN_BASE_MARKER}" "${VM_VPN_BASE_MARKER}.rebuilt"
 	run "${VM_SCRIPT}" start demo dev

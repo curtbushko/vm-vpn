@@ -48,7 +48,7 @@ shutdown_build_guest() {
 	local shutdown_attempt=0
 	# The guest can close Tart's transport before the shutdown RPC returns.
 	# Observe the VM state instead of treating that disconnect as a failure.
-	tart exec "$BUILD_VM_NAME" sudo /sbin/shutdown -h now || true
+	tart exec "$BUILD_VM_NAME" sudo /sbin/shutdown -h now 2>/dev/null || true
 	while ((shutdown_attempt < 60)); do
 		if tart get "$BUILD_VM_NAME" 2>/dev/null | tail -n 1 | grep -q 'stopped$'; then
 			wait "$tart_pid" || true

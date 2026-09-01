@@ -202,7 +202,9 @@ Each config mounts only its own
   managed by this bootstrap are removed when mounted files change; manual AWS
   VPN Client profiles are left alone.
 - Replaces Firefox managed bookmarks with the mounted `bookmarks.json` entries.
-- Applies the mounted `appearance.json` color as the VM wallpaper.
+- Generates a VM-local wallpaper asset from the mounted `appearance.json` color.
+  It does not change the macOS wallpaper preference because that preference can
+  synchronize through an Apple account and affect another Mac.
 - Makes `shared/` available through the read-only workspace mount.
 
 This prevents VPN profiles and bookmarks from accumulating across configs.

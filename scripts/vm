@@ -3,7 +3,7 @@
 set -euo pipefail
 
 readonly BASE_VM_NAME="vm-vpn-base"
-readonly BASE_IMAGE_VERSION="4"
+readonly BASE_IMAGE_VERSION="9"
 readonly INSTANCE_PREFIX="vm-vpn-"
 REPO_ROOT="${VM_VPN_REPO_ROOT:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}"
 readonly REPO_ROOT
@@ -199,7 +199,7 @@ start_config() {
 		printf 'runtime: reusing existing runtime\n'
 	fi
 	printf 'runtime: starting\nbootstrap logs: task logs -- %s %s\n' "$product" "$environment"
-	exec tart run "$vm_name" --dir "$config_path:ro,tag=workspace"
+	exec tart run "$vm_name" --dir "workspace:$config_path:ro"
 }
 
 stop_config() {

@@ -8,13 +8,12 @@ readonly WORKSPACE_ROOT="${VM_VPN_WORKSPACE_ROOT:-/Volumes/My Shared Files/works
 readonly AWS_VPN_CLIENT="${VM_VPN_AWS_VPN_CLIENT:-/usr/local/bin/aws-vpn-client}"
 readonly BOOKMARKS_SOURCE="${WORKSPACE_ROOT}/bookmarks/bookmarks.json"
 readonly APPEARANCE_SOURCE="${WORKSPACE_ROOT}/appearance.json"
-readonly FIREFOX_POLICY_FILE="${VM_VPN_FIREFOX_POLICY_FILE:-/Library/Application Support/Mozilla/policies.json}"
+readonly FIREFOX_POLICY_FILE="${VM_VPN_FIREFOX_POLICY_FILE:-/Applications/Firefox.app/Contents/Resources/distribution/policies.json}"
 readonly STATE_ROOT="${VM_VPN_STATE_ROOT:-${HOME}/.local/state/vm-vpn}"
 readonly VPN_MANIFEST="${STATE_ROOT}/vpn-profiles"
 readonly WALLPAPER_FILE="${VM_VPN_WALLPAPER_FILE:-${STATE_ROOT}/wallpaper.png}"
 readonly WALLPAPER_SOURCE_FILE="${STATE_ROOT}/wallpaper.ppm"
 readonly SIPS="${VM_VPN_SIPS:-/usr/bin/sips}"
-readonly OSASCRIPT="${VM_VPN_OSASCRIPT:-/usr/bin/osascript}"
 
 [[ -d "$WORKSPACE_ROOT" ]] || exit 0
 
@@ -60,6 +59,34 @@ if [[ "$current_vpn_manifest" != "$desired_vpn_manifest" ]]; then
 	chmod 0600 "$VPN_MANIFEST"
 fi
 
+if [[ -f "$BOOKMARKS_SOURCE" ]]; then
+	if ! command -v jq >/dev/null 2>&1; then
+		printf 'bootstrap-workspace: jq is required\n' >&2
+		exit 1
+	fi
+	jq -e 'type == "array" and all(.[]; (.title | type == "string") and (.url | type == "string"))' \
+		"$BOOKMARKS_SOURCE" >/dev/null
+	bookmark_checksum="$(shasum -a 256 "$BOOKMARKS_SOURCE" | awk '{ print $1 }')"
+	if [[ ! -f "${STATE_ROOT}/bookmarks.checksum" ]] ||
+		[[ "$(<"${STATE_ROOT}/bookmarks.checksum")" != "$bookmark_checksum" ]]; then
+		[[ -w "$FIREFOX_POLICY_FILE" ]] || {
+			printf 'bootstrap-workspace: Firefox policy is not writable\n' >&2
+			exit 1
+		}
+		policy_temp="$(mktemp "${STATE_ROOT}/policies.XXXXXX")"
+		jq --slurpfile workspace_bookmarks "$BOOKMARKS_SOURCE" '
+  .policies.ManagedBookmarks = (
+    [{ "toplevel_name": "VM VPN" }] +
+    ($workspace_bookmarks[0] | map({ "name": .title, "url": .url }))
+  )
+' "$FIREFOX_POLICY_FILE" >"$policy_temp"
+		chmod 0644 "$policy_temp"
+		mv "$policy_temp" "$FIREFOX_POLICY_FILE"
+		printf '%s\n' "$bookmark_checksum" >"${STATE_ROOT}/bookmarks.checksum"
+		chmod 0600 "${STATE_ROOT}/bookmarks.checksum"
+	fi
+fi
+
 if [[ -f "$APPEARANCE_SOURCE" ]]; then
 	if ! command -v jq >/dev/null 2>&1; then
 		printf 'bootstrap-workspace: jq is required\n' >&2
@@ -67,10 +94,6 @@ if [[ -f "$APPEARANCE_SOURCE" ]]; then
 	fi
 	[[ -x "$SIPS" ]] || {
 		printf 'bootstrap-workspace: sips is required\n' >&2
-		exit 1
-	}
-	[[ -x "$OSASCRIPT" ]] || {
-		printf 'bootstrap-workspace: osascript is required\n' >&2
 		exit 1
 	}
 	wallpaper_color="$(jq -er '.wallpaperColor | select(test("^#[0-9A-Fa-f]{6}$"))' "$APPEARANCE_SOURCE")" || {
@@ -85,49 +108,7 @@ if [[ -f "$APPEARANCE_SOURCE" ]]; then
 		blue="$((16#${wallpaper_color:5:2}))"
 		printf 'P3\n1 1\n255\n%s %s %s\n' "$red" "$green" "$blue" >"$WALLPAPER_SOURCE_FILE"
 		"$SIPS" -s format png "$WALLPAPER_SOURCE_FILE" --out "$WALLPAPER_FILE" >/dev/null
-		"$OSASCRIPT" - "$WALLPAPER_FILE" <<'EOF'
-on run arguments
-  tell application "System Events"
-    repeat with desktop_item in desktops
-      set picture of desktop_item to POSIX file (item 1 of arguments)
-    end repeat
-  end tell
-end run
-EOF
 		printf '%s\n' "$appearance_checksum" >"${STATE_ROOT}/appearance.checksum"
 		chmod 0600 "${STATE_ROOT}/appearance.checksum" "$WALLPAPER_FILE" "$WALLPAPER_SOURCE_FILE"
 	fi
 fi
-
-[[ -f "$BOOKMARKS_SOURCE" ]] || exit 0
-if ! command -v jq >/dev/null 2>&1; then
-	printf 'bootstrap-workspace: jq is required\n' >&2
-	exit 1
-fi
-jq -e 'type == "array" and all(.[]; (.title | type == "string") and (.url | type == "string"))' \
-	"$BOOKMARKS_SOURCE" >/dev/null
-
-bookmark_checksum="$(shasum -a 256 "$BOOKMARKS_SOURCE" | awk '{ print $1 }')"
-readonly bookmark_checksum
-if [[ -f "${STATE_ROOT}/bookmarks.checksum" ]] &&
-	[[ "$(<"${STATE_ROOT}/bookmarks.checksum")" == "$bookmark_checksum" ]]; then
-	exit 0
-fi
-
-[[ -w "$FIREFOX_POLICY_FILE" ]] || {
-	printf 'bootstrap-workspace: Firefox policy is not writable\n' >&2
-	exit 1
-}
-policy_temp="$(mktemp "${STATE_ROOT}/policies.XXXXXX")"
-readonly policy_temp
-jq --slurpfile workspace_bookmarks "$BOOKMARKS_SOURCE" '
-  .policies.ManagedBookmarks = (
-    [{ "toplevel_name": "VM VPN" }] +
-    ($workspace_bookmarks[0] | map({ "name": .title, "url": .url }))
-  )
-' "$FIREFOX_POLICY_FILE" >"$policy_temp"
-chmod 0644 "$policy_temp"
-mv "$policy_temp" "$FIREFOX_POLICY_FILE"
-
-printf '%s\n' "$bookmark_checksum" >"${STATE_ROOT}/bookmarks.checksum"
-chmod 0600 "${STATE_ROOT}/bookmarks.checksum"
