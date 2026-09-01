@@ -23,11 +23,12 @@ setup() {
 }
 
 @test "Taskfile exposes the complete VM lifecycle with descriptions" {
-	for command_name in create start stop delete status list stop-all validate path seed setup image:build image:status clean doctor check help; do
+	for command_name in create start stop logs delete status list stop-all validate path seed setup image:build image:status clean doctor check help; do
 		grep -Eq "^  ${command_name}:" "${TASKFILE}"
 	done
 	grep -Fq 'task create -- demo dev' "${TASKFILE}"
 	grep -Fq 'task start -- demo dev' "${TASKFILE}"
+	grep -Fq 'task logs -- demo dev' "${TASKFILE}"
 	grep -Fq 'task delete -- demo dev' "${TASKFILE}"
 }
 

@@ -26,6 +26,7 @@ tasks:
           '  task validate -- <product> <environment>' \
           '  task start -- <product> <environment>' \
           '  task stop -- <product> <environment>' \
+          '  task logs -- <product> <environment>' \
           '  task status -- <product> <environment>' \
           '  task path -- <product> <environment>' \
           '  task delete -- <product> <environment>' \
@@ -36,6 +37,7 @@ tasks:
           '  validate      Check bookmarks, VPN readiness, and config layout.' \
           '  start         Start a config; create its hidden runtime if needed.' \
           '  stop          Stop a config while preserving config and runtime state.' \
+          '  logs          Stream guest workspace bootstrap output and errors.' \
           '  status        Show config validity and runtime state.' \
           '  path          Print the config directory under ~/.config/vm-vpn.' \
           '  delete        Permanently delete a config and its hidden runtime.' \
@@ -112,6 +114,18 @@ tasks:
       VM_VPN_ENVIRONMENT: '{{.ENVIRONMENT}}'
     cmds:
       - ./scripts/vm stop "$VM_VPN_PRODUCT" "$VM_VPN_ENVIRONMENT"
+
+  logs:
+    desc: Stream bootstrap logs for <product> <environment>.
+    interactive: true
+    preconditions:
+      - sh: test '{{.ARG_COUNT}}' -eq 2
+        msg: 'logs requires <product> <environment>; example: task logs -- demo dev'
+    env:
+      VM_VPN_PRODUCT: '{{.PRODUCT}}'
+      VM_VPN_ENVIRONMENT: '{{.ENVIRONMENT}}'
+    cmds:
+      - ./scripts/vm logs "$VM_VPN_PRODUCT" "$VM_VPN_ENVIRONMENT"
 
   status:
     desc: Show config validity and runtime state for <product> <environment>.

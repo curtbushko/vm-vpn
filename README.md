@@ -74,11 +74,14 @@ After the one-time setup, the everyday workflow is:
 ```console
 task list
 task start -- demo dev
+task logs -- demo dev
 task stop -- demo dev
 ```
 
-Use `task status -- demo dev` when a config does not start as expected. Run
-`task help` for the complete command guide; bare `task` shows the same guide.
+Use `task status -- demo dev` when a config does not start as expected. Use
+`task logs -- demo dev` in another terminal to stream the guest bootstrap's
+standard output and errors. Run `task help` for the complete command guide;
+bare `task` shows the same guide.
 
 ## Config locations and format
 
@@ -198,6 +201,15 @@ Each config mounts only its own
 
 This prevents VPN profiles and bookmarks from accumulating across configs.
 Host-file changes take effect the next time that config starts.
+
+While a config is running, stream the most recent guest bootstrap output and
+continue following both its normal and error logs with:
+
+```console
+task logs -- demo dev
+```
+
+Press Ctrl-C to stop following the logs; this does not stop the VM.
 
 Stop one config or all running configs without deleting their state:
 

@@ -102,6 +102,10 @@ setup() {
 	grep -Fq 'delete-profile --profile-name "$profile_name"' "${BOOTSTRAP_SCRIPT}"
 	grep -Fq 'ManagedBookmarks' "${BOOTSTRAP_SCRIPT}"
 	grep -Fq 'com.vm-vpn.bootstrap.plist' "${CONFIGURE_SCRIPT}"
+	grep -Fq 'StandardOutPath' "${CONFIGURE_SCRIPT}"
+	grep -Fq 'vm-vpn-bootstrap.log' "${CONFIGURE_SCRIPT}"
+	grep -Fq 'StandardErrorPath' "${CONFIGURE_SCRIPT}"
+	grep -Fq 'vm-vpn-bootstrap.error.log' "${CONFIGURE_SCRIPT}"
 	grep -Fq 'chown "$(id -u):$(id -g)" "${FIREFOX_POLICY_FILE}"' "${CONFIGURE_SCRIPT}"
 }
 

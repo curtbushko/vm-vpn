@@ -37,9 +37,12 @@ workspace_path() {
 instance_name() {
 	local product="$1"
 	local environment="$2"
+	local encoded_product encoded_environment
 	validate_component product "$product"
 	validate_component environment "$environment"
-	printf '%s%s--%s\n' "$INSTANCE_PREFIX" "$product" "$environment"
+	encoded_product="${product//-/_}"
+	encoded_environment="${environment//-/_}"
+	printf '%s%s-%s\n' "$INSTANCE_PREFIX" "$encoded_product" "$encoded_environment"
 }
 
 initialize_workspace() {
@@ -95,6 +98,17 @@ vpn_state() {
 	printf 'missing\n'
 }
 
+vpn_profile_count() {
+	local config_path="$1"
+	local count=0
+	local vpn_profile
+	for vpn_profile in "${config_path}"/vpn/*.ovpn; do
+		[[ -s "$vpn_profile" ]] || continue
+		((count += 1))
+	done
+	printf '%d\n' "$count"
+}
+
 runtime_state() {
 	local vm_name="$1"
 	local details
@@ -116,17 +130,23 @@ create_config() {
 start_config() {
 	local product="$1"
 	local environment="$2"
-	local config_path vm_name bookmark_status
+	local config_path vm_name bookmark_status vpn_count
 	config_path="$(require_workspace "$product" "$environment")"
 	bookmark_status="$(bookmarks_state "$config_path")"
 	[[ "$bookmark_status" == "valid" ]] || fail "bookmarks are $bookmark_status; run: task validate -- $product $environment"
+	vpn_count="$(vpn_profile_count "$config_path")"
+	printf 'config: %s/%s\nbookmarks: %s\nvpn profiles: %s\n' \
+		"$product" "$environment" "$bookmark_status" "$vpn_count"
 	vm_name="$(instance_name "$product" "$environment")"
 	require_command tart
 	tart get "$BASE_VM_NAME" >/dev/null 2>&1 || fail "runtime image is unavailable; run: task setup"
 	if ! tart get "$vm_name" >/dev/null 2>&1; then
+		printf 'runtime: creating from shared image\n'
 		tart clone "$BASE_VM_NAME" "$vm_name"
+	else
+		printf 'runtime: reusing existing runtime\n'
 	fi
-	printf 'starting configuration %s/%s\n' "$product" "$environment"
+	printf 'runtime: starting\nbootstrap logs: task logs -- %s %s\n' "$product" "$environment"
 	exec tart run "$vm_name" --dir "$config_path:ro,tag=workspace"
 }
 
@@ -137,6 +157,17 @@ stop_config() {
 	require_command tart
 	tart get "$vm_name" >/dev/null 2>&1 || fail "configuration is not running and has no runtime"
 	tart stop "$vm_name"
+}
+
+logs_config() {
+	local vm_name
+	vm_name="$(instance_name "$1" "$2")"
+	require_workspace "$1" "$2" >/dev/null
+	require_command tart
+	tart get "$vm_name" >/dev/null 2>&1 || fail "configuration has no runtime; run: task start -- $1 $2"
+	exec tart exec "$vm_name" /usr/bin/tail -n 200 -f \
+		/Users/admin/Library/Logs/vm-vpn-bootstrap.log \
+		/Users/admin/Library/Logs/vm-vpn-bootstrap.error.log
 }
 
 delete_config() {
@@ -212,7 +243,8 @@ managed_instance_names() {
 	tart list | awk -v prefix="$INSTANCE_PREFIX" '
     {
       for (field = 1; field <= NF; field++) {
-        if (index($field, prefix) == 1 && $field != "vm-vpn-base" && index($field, "--") > 0) {
+        identity = substr($field, length(prefix) + 1)
+        if (index($field, prefix) == 1 && $field != "vm-vpn-base" && index(identity, "-") > 0) {
           print $field
         }
       }
@@ -226,8 +258,10 @@ clean_orphans() {
 	while IFS= read -r vm_name; do
 		[[ -n "$vm_name" ]] || continue
 		identity="${vm_name#"$INSTANCE_PREFIX"}"
-		product="${identity%%--*}"
-		environment="${identity#*--}"
+		product="${identity%%-*}"
+		environment="${identity#*-}"
+		product="${product//_/-}"
+		environment="${environment//_/-}"
 		config_path="$(workspace_path "$product" "$environment")"
 		[[ -d "$config_path" ]] && continue
 		tart stop "$vm_name" >/dev/null 2>&1 || true
@@ -290,6 +324,10 @@ main() {
 	stop)
 		[[ $# -eq 3 ]] || fail "usage: task stop -- <product> <environment>"
 		stop_config "$2" "$3"
+		;;
+	logs)
+		[[ $# -eq 3 ]] || fail "usage: task logs -- <product> <environment>"
+		logs_config "$2" "$3"
 		;;
 	delete)
 		[[ $# -eq 3 ]] || fail "usage: task delete -- <product> <environment>"

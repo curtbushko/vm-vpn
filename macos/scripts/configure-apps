@@ -6,6 +6,8 @@ readonly FIREFOX_POLICY_DIR="/Library/Application Support/Mozilla"
 readonly FIREFOX_POLICY_FILE="${FIREFOX_POLICY_DIR}/policies.json"
 readonly LAUNCH_AGENT="${HOME}/Library/LaunchAgents/com.vm-vpn.bootstrap.plist"
 readonly TART_AGENT="${HOME}/Library/LaunchAgents/org.openai.tart-guest-agent.plist"
+readonly BOOTSTRAP_LOG="${HOME}/Library/Logs/vm-vpn-bootstrap.log"
+readonly BOOTSTRAP_ERROR_LOG="${HOME}/Library/Logs/vm-vpn-bootstrap.error.log"
 
 if [[ ! -x "${HOME}/.local/bin/vm-vpn-bootstrap" ]]; then
 	printf 'configure-apps: vm-vpn-bootstrap is required\n' >&2
@@ -57,7 +59,7 @@ sudo chmod 0644 "${FIREFOX_POLICY_FILE}"
 # managed policies are available on the first interactive launch.
 /Applications/Firefox.app/Contents/MacOS/firefox -CreateProfile vm-vpn >/dev/null
 
-install -d -m 0700 "${HOME}/.config/AWSVPNClient/OpenVpnConfigs" "${HOME}/Library/LaunchAgents"
+install -d -m 0700 "${HOME}/.config/AWSVPNClient/OpenVpnConfigs" "${HOME}/Library/LaunchAgents" "${HOME}/Library/Logs"
 cat >"$LAUNCH_AGENT" <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -66,6 +68,8 @@ cat >"$LAUNCH_AGENT" <<EOF
   <key>Label</key><string>com.vm-vpn.bootstrap</string>
   <key>ProgramArguments</key>
   <array><string>${HOME}/.local/bin/vm-vpn-bootstrap</string></array>
+  <key>StandardOutPath</key><string>${BOOTSTRAP_LOG}</string>
+  <key>StandardErrorPath</key><string>${BOOTSTRAP_ERROR_LOG}</string>
   <key>RunAtLoad</key><true/>
   <key>StartInterval</key><integer>30</integer>
 </dict>

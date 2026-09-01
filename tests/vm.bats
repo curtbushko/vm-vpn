@@ -71,11 +71,17 @@ EOF
 
 	run "${VM_SCRIPT}" start demo dev
 	[ "${status}" -eq 0 ]
+	[[ "${output}" == *"config: demo/dev"* ]]
+	[[ "${output}" == *"bookmarks: valid"* ]]
+	[[ "${output}" == *"vpn profiles: 0"* ]]
+	[[ "${output}" == *"runtime: creating from shared image"* ]]
+	[[ "${output}" == *"bootstrap logs: task logs -- demo dev"* ]]
 	run "${VM_SCRIPT}" start demo dev
 	[ "${status}" -eq 0 ]
+	[[ "${output}" == *"runtime: reusing existing runtime"* ]]
 
-	[ "$(grep -Fc 'clone vm-vpn-base vm-vpn-demo--dev' "${TART_LOG}")" -eq 1 ]
-	[ "$(grep -Fc "run vm-vpn-demo--dev --dir ${VM_VPN_CONFIG_HOME}/demo/dev:ro,tag=workspace" "${TART_LOG}")" -eq 2 ]
+	[ "$(grep -Fc 'clone vm-vpn-base vm-vpn-demo-dev' "${TART_LOG}")" -eq 1 ]
+	[ "$(grep -Fc "run vm-vpn-demo-dev --dir ${VM_VPN_CONFIG_HOME}/demo/dev:ro,tag=workspace" "${TART_LOG}")" -eq 2 ]
 }
 
 @test "start rejects a missing configuration or base image" {
@@ -90,16 +96,28 @@ EOF
 	[[ "${output}" == *"task setup"* ]]
 }
 
+@test "logs streams the guest bootstrap output for a running config" {
+	"${VM_SCRIPT}" create demo dev
+	"${VM_SCRIPT}" start demo dev
+
+	run "${VM_SCRIPT}" logs demo dev
+	[ "${status}" -eq 0 ]
+	grep -Fq 'exec vm-vpn-demo-dev /usr/bin/tail -n 200 -f /Users/admin/Library/Logs/vm-vpn-bootstrap.log /Users/admin/Library/Logs/vm-vpn-bootstrap.error.log' "${TART_LOG}"
+}
+
 @test "multiple configs start independent hidden VMs concurrently" {
 	for environment in dev staging prod; do
 		"${VM_SCRIPT}" create demo "${environment}"
 		run "${VM_SCRIPT}" start demo "${environment}"
 		[ "${status}" -eq 0 ]
 	done
+	"${VM_SCRIPT}" create internal-tools prod-east
+	"${VM_SCRIPT}" start internal-tools prod-east
 
-	grep -Fq 'clone vm-vpn-base vm-vpn-demo--dev' "${TART_LOG}"
-	grep -Fq 'clone vm-vpn-base vm-vpn-demo--staging' "${TART_LOG}"
-	grep -Fq 'clone vm-vpn-base vm-vpn-demo--prod' "${TART_LOG}"
+	grep -Fq 'clone vm-vpn-base vm-vpn-demo-dev' "${TART_LOG}"
+	grep -Fq 'clone vm-vpn-base vm-vpn-demo-staging' "${TART_LOG}"
+	grep -Fq 'clone vm-vpn-base vm-vpn-demo-prod' "${TART_LOG}"
+	grep -Fq 'clone vm-vpn-base vm-vpn-internal_tools-prod_east' "${TART_LOG}"
 }
 
 @test "validate reports bookmark and VPN readiness" {
@@ -143,7 +161,7 @@ EOF
 	run "${VM_SCRIPT}" delete demo staging
 	[ "${status}" -eq 0 ]
 	[ ! -e "${VM_VPN_CONFIG_HOME}/demo/staging" ]
-	grep -Fxq 'delete vm-vpn-demo--staging' "${TART_LOG}"
+	grep -Fxq 'delete vm-vpn-demo-staging' "${TART_LOG}"
 }
 
 @test "setup is idempotent and builds only when the base is absent" {
@@ -158,13 +176,13 @@ EOF
 }
 
 @test "clean deletes runtime clones whose configs no longer exist" {
-	printf '%s\n' 'vm-vpn-demo--dev' 'vm-vpn-demo--prod' >"${TART_INSTANCES}"
+	printf '%s\n' 'vm-vpn-demo-dev' 'vm-vpn-demo-prod' >"${TART_INSTANCES}"
 	"${VM_SCRIPT}" create demo dev
 
 	run "${VM_SCRIPT}" clean
 	[ "${status}" -eq 0 ]
-	grep -Fxq 'delete vm-vpn-demo--prod' "${TART_LOG}"
-	run grep -Fx 'delete vm-vpn-demo--dev' "${TART_LOG}"
+	grep -Fxq 'delete vm-vpn-demo-prod' "${TART_LOG}"
+	run grep -Fx 'delete vm-vpn-demo-dev' "${TART_LOG}"
 	[ "${status}" -ne 0 ]
 }
 
