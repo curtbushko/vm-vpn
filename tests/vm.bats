@@ -12,7 +12,7 @@ setup() {
 	export PATH="${BATS_TEST_TMPDIR}/bin:${PATH}"
 	mkdir -p "${BATS_TEST_TMPDIR}/bin"
 	: >"${TART_INSTANCES}"
-	printf 'verified\n' >"${VM_VPN_BASE_MARKER}"
+	printf 'verified:2\n' >"${VM_VPN_BASE_MARKER}"
 
 	cat >"${BATS_TEST_TMPDIR}/bin/tart" <<'EOF'
 #!/usr/bin/env bash
@@ -172,11 +172,14 @@ EOF
 	[ ! -e "${TART_LOG}.build" ]
 
 	export TART_BASE_MISSING=1
+	printf '%s\n' 'vm-vpn-vault-staging' 'vm-vpn-demo-dev' >"${TART_INSTANCES}"
 	mv "${VM_VPN_BASE_MARKER}" "${VM_VPN_BASE_MARKER}.missing"
 	run "${VM_SCRIPT}" setup
 	[ "${status}" -eq 0 ]
 	[ "$(<"${TART_LOG}.build")" = "vm-vpn-base" ]
-	[ "$(<"${VM_VPN_BASE_MARKER}")" = "verified" ]
+	[ "$(<"${VM_VPN_BASE_MARKER}")" = "verified:2" ]
+	grep -Fxq 'delete vm-vpn-vault-staging' "${TART_LOG}"
+	grep -Fxq 'delete vm-vpn-demo-dev' "${TART_LOG}"
 }
 
 @test "setup replaces an unverified base while start rejects one" {
@@ -189,7 +192,7 @@ EOF
 	grep -Fxq 'stop vm-vpn-base' "${TART_LOG}"
 	grep -Fxq 'delete vm-vpn-base' "${TART_LOG}"
 	[ "$(<"${TART_LOG}.build")" = "vm-vpn-base" ]
-	[ "$(<"${VM_VPN_BASE_MARKER}")" = "verified" ]
+	[ "$(<"${VM_VPN_BASE_MARKER}")" = "verified:2" ]
 
 	mv "${VM_VPN_BASE_MARKER}" "${VM_VPN_BASE_MARKER}.rebuilt"
 	run "${VM_SCRIPT}" start demo dev

@@ -44,6 +44,9 @@ setup() {
 	grep -Fq 'macos/packer/vpn-workspace.pkr.hcl' "$build_script"
 	grep -Fq 'tart get' "$build_script"
 	grep -Fq 'tart run "$BUILD_VM_NAME" &' "$build_script"
+	[ "$(grep -Fc 'tart run "$BUILD_VM_NAME" &' "$build_script")" -eq 2 ]
+	grep -Fq 'tart exec "$BUILD_VM_NAME" sudo /sbin/shutdown -h now' "$build_script"
+	grep -Fq 'tart exec -i "$BUILD_VM_NAME" /bin/bash -s <"${SCRIPT_DIR}/verify-image"' "$build_script"
 	grep -Fq 'tart rename "$BUILD_VM_NAME" "$VM_NAME"' "$build_script"
 	grep -Fq 'provision-vm' "$build_script"
 	grep -Fq 'bootstrap-guest-agent' "$build_script"

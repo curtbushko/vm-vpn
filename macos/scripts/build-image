@@ -30,6 +30,24 @@ stop_build_guest() {
 		tart stop "$BUILD_VM_NAME"
 	fi
 }
+
+wait_for_guest() {
+	local attempt=0
+	while ((attempt < 60)); do
+		if tart exec "$BUILD_VM_NAME" /usr/bin/true >/dev/null 2>&1; then
+			return 0
+		fi
+		((attempt += 1))
+		sleep 2
+	done
+	printf 'build-image: rebuilt guest did not become ready\n' >&2
+	return 1
+}
+
+shutdown_build_guest() {
+	tart exec "$BUILD_VM_NAME" sudo /sbin/shutdown -h now
+	wait "$tart_pid" || true
+}
 trap stop_build_guest EXIT
 
 cd "$REPO_ROOT"
@@ -44,12 +62,18 @@ packer build -color=false \
 sleep 5
 tart run "$BUILD_VM_NAME" &
 tart_pid=$!
-readonly tart_pid
 
 env VM_NAME="$BUILD_VM_NAME" "${SCRIPT_DIR}/bootstrap-guest-agent"
 env VM_NAME="$BUILD_VM_NAME" "${SCRIPT_DIR}/provision-vm"
-stop_build_guest
-wait "$tart_pid" || true
+shutdown_build_guest
+
+# Verify again after a normal reboot. macOS persists some user preferences,
+# including the Dock, only during a graceful guest shutdown.
+tart run "$BUILD_VM_NAME" &
+tart_pid=$!
+wait_for_guest
+tart exec -i "$BUILD_VM_NAME" /bin/bash -s <"${SCRIPT_DIR}/verify-image"
+shutdown_build_guest
 trap - EXIT
 tart rename "$BUILD_VM_NAME" "$VM_NAME"
 tart get "$VM_NAME"
