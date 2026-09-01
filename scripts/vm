@@ -3,7 +3,7 @@
 set -euo pipefail
 
 readonly BASE_VM_NAME="vm-vpn-base"
-readonly BASE_IMAGE_VERSION="2"
+readonly BASE_IMAGE_VERSION="4"
 readonly INSTANCE_PREFIX="vm-vpn-"
 REPO_ROOT="${VM_VPN_REPO_ROOT:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}"
 readonly REPO_ROOT
@@ -47,10 +47,33 @@ instance_name() {
 	printf '%s%s-%s\n' "$INSTANCE_PREFIX" "$encoded_product" "$encoded_environment"
 }
 
+appearance_color() {
+	case "$1" in
+	dev) printf '#2563EB\n' ;;
+	staging) printf '#D97706\n' ;;
+	prod) printf '#B91C1C\n' ;;
+	awsgov-prod) printf '#6D28D9\n' ;;
+	preprod) printf '#C2410C\n' ;;
+	hybridtest) printf '#0F766E\n' ;;
+	*) printf '#374151\n' ;;
+	esac
+}
+
+write_appearance() {
+	local config_path="$1"
+	local environment="$2"
+	local wallpaper_color
+	wallpaper_color="$(appearance_color "$environment")"
+	printf '{\n  "wallpaperColor": "%s"\n}\n' "$wallpaper_color" >"$config_path/appearance.json"
+	chmod 0600 "$config_path/appearance.json"
+}
+
 initialize_workspace() {
 	local config_path="$1"
+	local environment="$2"
 	umask 077
 	install -d -m 0700 "$config_path" "$config_path/vpn" "$config_path/bookmarks" "$config_path/shared"
+	write_appearance "$config_path" "$environment"
 	cat >"$config_path/bookmarks/bookmarks.json" <<'EOF'
 [
   {
@@ -82,6 +105,19 @@ bookmarks_state() {
 		printf 'missing\n'
 	elif jq -e 'type == "array" and all(.[]; (.title | type == "string") and (.url | type == "string"))' \
 		"$bookmarks_file" >/dev/null 2>&1; then
+		printf 'valid\n'
+	else
+		printf 'invalid\n'
+	fi
+}
+
+appearance_state() {
+	local config_path="$1"
+	local appearance_file="${config_path}/appearance.json"
+	if [[ ! -f "$appearance_file" ]]; then
+		printf 'missing\n'
+	elif jq -e '.wallpaperColor | type == "string" and test("^#[0-9A-Fa-f]{6}$")' \
+		"$appearance_file" >/dev/null 2>&1; then
 		printf 'valid\n'
 	else
 		printf 'invalid\n'
@@ -134,20 +170,25 @@ create_config() {
 	local config_path
 	config_path="$(workspace_path "$1" "$2")"
 	[[ ! -e "$config_path" ]] || fail "configuration already exists: $1/$2"
-	initialize_workspace "$config_path"
+	initialize_workspace "$config_path" "$2"
 	printf 'created configuration %s/%s at %s\n' "$1" "$2" "$config_path"
 }
 
 start_config() {
 	local product="$1"
 	local environment="$2"
-	local config_path vm_name bookmark_status vpn_count
+	local config_path vm_name bookmark_status appearance_status vpn_count
 	config_path="$(require_workspace "$product" "$environment")"
+	if [[ "$(appearance_state "$config_path")" == "missing" ]]; then
+		write_appearance "$config_path" "$environment"
+	fi
+	appearance_status="$(appearance_state "$config_path")"
+	[[ "$appearance_status" == "valid" ]] || fail "appearance is $appearance_status; fix: $config_path/appearance.json"
 	bookmark_status="$(bookmarks_state "$config_path")"
 	[[ "$bookmark_status" == "valid" ]] || fail "bookmarks are $bookmark_status; run: task validate -- $product $environment"
 	vpn_count="$(vpn_profile_count "$config_path")"
-	printf 'config: %s/%s\nbookmarks: %s\nvpn profiles: %s\n' \
-		"$product" "$environment" "$bookmark_status" "$vpn_count"
+	printf 'config: %s/%s\nappearance: %s\nbookmarks: %s\nvpn profiles: %s\n' \
+		"$product" "$environment" "$appearance_status" "$bookmark_status" "$vpn_count"
 	vm_name="$(instance_name "$product" "$environment")"
 	require_command tart
 	require_base_image
@@ -282,12 +323,18 @@ clean_orphans() {
 }
 
 delete_managed_runtimes() {
-	local vm_name
+	local vm_name identity product environment
 	while IFS= read -r vm_name; do
 		[[ -n "$vm_name" ]] || continue
 		tart stop "$vm_name" >/dev/null 2>&1 || true
 		tart delete "$vm_name"
-		printf 'runtime: invalidated %s for the new base image\n' "$vm_name"
+		identity="${vm_name#"$INSTANCE_PREFIX"}"
+		product="${identity%%-*}"
+		environment="${identity#*-}"
+		product="${product//_/-}"
+		environment="${environment//_/-}"
+		printf 'runtime: removed old runtime for %s/%s; next start will recreate it from the new base image\n' \
+			"$product" "$environment"
 	done < <(managed_instance_names)
 }
 

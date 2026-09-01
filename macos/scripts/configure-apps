@@ -28,6 +28,13 @@ sudo tee "${FIREFOX_POLICY_FILE}" >/dev/null <<'EOF'
 {
   "policies": {
     "DisplayBookmarksToolbar": "always",
+    "Homepage": {
+      "URL": "about:blank",
+      "Locked": true,
+      "StartPage": "none"
+    },
+    "NewTabPage": false,
+    "NoDefaultBookmarks": true,
     "ManagedBookmarks": [
       { "toplevel_name": "VM VPN" }
     ],
@@ -58,6 +65,11 @@ sudo chmod 0644 "${FIREFOX_POLICY_FILE}"
 # Ensure a Firefox profile exists before runtime configuration is mounted so
 # managed policies are available on the first interactive launch.
 /Applications/Firefox.app/Contents/MacOS/firefox -CreateProfile vm-vpn >/dev/null
+/Applications/Firefox.app/Contents/MacOS/firefox --setDefaultBrowser >/dev/null 2>&1 &
+default_browser_pid=$!
+sleep 5
+kill "$default_browser_pid" 2>/dev/null || true
+wait "$default_browser_pid" 2>/dev/null || true
 
 install -d -m 0700 "${HOME}/.config/AWSVPNClient/OpenVpnConfigs" "${HOME}/Library/LaunchAgents" "${HOME}/Library/Logs"
 cat >"$LAUNCH_AGENT" <<EOF

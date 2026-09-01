@@ -125,9 +125,16 @@ setup() {
 	grep -Fq 'intl.locale.requested' "${CONFIGURE_SCRIPT}"
 	grep -Fq 'LANG' "${CONFIGURE_SCRIPT}"
 	grep -Fq -- '-CreateProfile vm-vpn' "${CONFIGURE_SCRIPT}"
+	grep -Fq '"Homepage"' "${CONFIGURE_SCRIPT}"
+	grep -Fq '"StartPage": "none"' "${CONFIGURE_SCRIPT}"
+	grep -Fq '"NoDefaultBookmarks": true' "${CONFIGURE_SCRIPT}"
+	grep -Fq '"NewTabPage": false' "${CONFIGURE_SCRIPT}"
+	grep -Fq -- '--setDefaultBrowser' "${CONFIGURE_SCRIPT}"
+	grep -Fq 'wait "$default_browser_pid"' "${CONFIGURE_SCRIPT}"
 }
 
 @test "macOS bootstrap synchronizes mounted VPN profiles and bookmarks" {
+	grep -Fq 'export PATH="/opt/homebrew/bin:${PATH}"' "${BOOTSTRAP_SCRIPT}"
 	grep -Fq '/usr/local/bin/aws-vpn-client' "${BOOTSTRAP_SCRIPT}"
 	grep -Fq '/Volumes/My Shared Files/workspace' "${BOOTSTRAP_SCRIPT}"
 	grep -Fq 'vpn/*.ovpn' "${BOOTSTRAP_SCRIPT}"

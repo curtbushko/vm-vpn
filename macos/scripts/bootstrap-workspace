@@ -2,12 +2,19 @@
 
 set -euo pipefail
 
+export PATH="/opt/homebrew/bin:${PATH}"
+
 readonly WORKSPACE_ROOT="${VM_VPN_WORKSPACE_ROOT:-/Volumes/My Shared Files/workspace}"
 readonly AWS_VPN_CLIENT="${VM_VPN_AWS_VPN_CLIENT:-/usr/local/bin/aws-vpn-client}"
 readonly BOOKMARKS_SOURCE="${WORKSPACE_ROOT}/bookmarks/bookmarks.json"
+readonly APPEARANCE_SOURCE="${WORKSPACE_ROOT}/appearance.json"
 readonly FIREFOX_POLICY_FILE="${VM_VPN_FIREFOX_POLICY_FILE:-/Library/Application Support/Mozilla/policies.json}"
 readonly STATE_ROOT="${VM_VPN_STATE_ROOT:-${HOME}/.local/state/vm-vpn}"
 readonly VPN_MANIFEST="${STATE_ROOT}/vpn-profiles"
+readonly WALLPAPER_FILE="${VM_VPN_WALLPAPER_FILE:-${STATE_ROOT}/wallpaper.png}"
+readonly WALLPAPER_SOURCE_FILE="${STATE_ROOT}/wallpaper.ppm"
+readonly SIPS="${VM_VPN_SIPS:-/usr/bin/sips}"
+readonly OSASCRIPT="${VM_VPN_OSASCRIPT:-/usr/bin/osascript}"
 
 [[ -d "$WORKSPACE_ROOT" ]] || exit 0
 
@@ -51,6 +58,45 @@ if [[ "$current_vpn_manifest" != "$desired_vpn_manifest" ]]; then
 	done
 	printf '%s\n' "$desired_vpn_manifest" >"$VPN_MANIFEST"
 	chmod 0600 "$VPN_MANIFEST"
+fi
+
+if [[ -f "$APPEARANCE_SOURCE" ]]; then
+	if ! command -v jq >/dev/null 2>&1; then
+		printf 'bootstrap-workspace: jq is required\n' >&2
+		exit 1
+	fi
+	[[ -x "$SIPS" ]] || {
+		printf 'bootstrap-workspace: sips is required\n' >&2
+		exit 1
+	}
+	[[ -x "$OSASCRIPT" ]] || {
+		printf 'bootstrap-workspace: osascript is required\n' >&2
+		exit 1
+	}
+	wallpaper_color="$(jq -er '.wallpaperColor | select(test("^#[0-9A-Fa-f]{6}$"))' "$APPEARANCE_SOURCE")" || {
+		printf 'bootstrap-workspace: appearance wallpaperColor must be a six-digit hex color\n' >&2
+		exit 1
+	}
+	appearance_checksum="$(shasum -a 256 "$APPEARANCE_SOURCE" | awk '{ print $1 }')"
+	if [[ ! -f "${STATE_ROOT}/appearance.checksum" ]] ||
+		[[ "$(<"${STATE_ROOT}/appearance.checksum")" != "$appearance_checksum" ]]; then
+		red="$((16#${wallpaper_color:1:2}))"
+		green="$((16#${wallpaper_color:3:2}))"
+		blue="$((16#${wallpaper_color:5:2}))"
+		printf 'P3\n1 1\n255\n%s %s %s\n' "$red" "$green" "$blue" >"$WALLPAPER_SOURCE_FILE"
+		"$SIPS" -s format png "$WALLPAPER_SOURCE_FILE" --out "$WALLPAPER_FILE" >/dev/null
+		"$OSASCRIPT" - "$WALLPAPER_FILE" <<'EOF'
+on run arguments
+  tell application "System Events"
+    repeat with desktop_item in desktops
+      set picture of desktop_item to POSIX file (item 1 of arguments)
+    end repeat
+  end tell
+end run
+EOF
+		printf '%s\n' "$appearance_checksum" >"${STATE_ROOT}/appearance.checksum"
+		chmod 0600 "${STATE_ROOT}/appearance.checksum" "$WALLPAPER_FILE" "$WALLPAPER_SOURCE_FILE"
+	fi
 fi
 
 [[ -f "$BOOKMARKS_SOURCE" ]] || exit 0

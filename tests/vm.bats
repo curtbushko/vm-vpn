@@ -12,7 +12,7 @@ setup() {
 	export PATH="${BATS_TEST_TMPDIR}/bin:${PATH}"
 	mkdir -p "${BATS_TEST_TMPDIR}/bin"
 	: >"${TART_INSTANCES}"
-	printf 'verified:2\n' >"${VM_VPN_BASE_MARKER}"
+	printf 'verified:4\n' >"${VM_VPN_BASE_MARKER}"
 
 	cat >"${BATS_TEST_TMPDIR}/bin/tart" <<'EOF'
 #!/usr/bin/env bash
@@ -56,6 +56,7 @@ EOF
 	[ -d "${VM_VPN_CONFIG_HOME}/demo/dev/vpn" ]
 	[ -d "${VM_VPN_CONFIG_HOME}/demo/dev/bookmarks" ]
 	[ -d "${VM_VPN_CONFIG_HOME}/demo/dev/shared" ]
+	[ "$(jq -r '.wallpaperColor' "${VM_VPN_CONFIG_HOME}/demo/dev/appearance.json")" = "#2563EB" ]
 	[ "$(jq -r 'length' "${VM_VPN_CONFIG_HOME}/demo/dev/bookmarks/bookmarks.json")" -eq 2 ]
 	[ "$(jq -r '.[0].title' "${VM_VPN_CONFIG_HOME}/demo/dev/bookmarks/bookmarks.json")" = "Company documentation" ]
 	[ "$(jq -r '.[0].url' "${VM_VPN_CONFIG_HOME}/demo/dev/bookmarks/bookmarks.json")" = "https://docs.example.com/" ]
@@ -66,6 +67,22 @@ EOF
 	run "${VM_SCRIPT}" create demo dev
 	[ "${status}" -ne 0 ]
 	[[ "${output}" == *"configuration already exists"* ]]
+}
+
+@test "create chooses a wallpaper color from the environment" {
+	local environment expected_color
+	while read -r environment expected_color; do
+		"${VM_SCRIPT}" create demo "$environment"
+		[ "$(jq -r '.wallpaperColor' "${VM_VPN_CONFIG_HOME}/demo/${environment}/appearance.json")" = "$expected_color" ]
+	done <<'EOF'
+dev #2563EB
+staging #D97706
+prod #B91C1C
+awsgov-prod #6D28D9
+preprod #C2410C
+hybridtest #0F766E
+qa #374151
+EOF
 }
 
 @test "start lazily creates and then reuses the hidden runtime clone" {
@@ -84,6 +101,21 @@ EOF
 
 	[ "$(grep -Fc 'clone vm-vpn-base vm-vpn-demo-dev' "${TART_LOG}")" -eq 1 ]
 	[ "$(grep -Fc "run vm-vpn-demo-dev --dir ${VM_VPN_CONFIG_HOME}/demo/dev:ro,tag=workspace" "${TART_LOG}")" -eq 2 ]
+}
+
+@test "start migrates missing appearance and rejects invalid colors" {
+	"${VM_SCRIPT}" create demo staging
+	mv "${VM_VPN_CONFIG_HOME}/demo/staging/appearance.json" "${VM_VPN_CONFIG_HOME}/demo/staging/appearance.json.missing"
+
+	run "${VM_SCRIPT}" start demo staging
+	[ "${status}" -eq 0 ]
+	[ "$(jq -r '.wallpaperColor' "${VM_VPN_CONFIG_HOME}/demo/staging/appearance.json")" = "#D97706" ]
+	[[ "${output}" == *"appearance: valid"* ]]
+
+	printf '{"wallpaperColor":"orange"}\n' >"${VM_VPN_CONFIG_HOME}/demo/staging/appearance.json"
+	run "${VM_SCRIPT}" start demo staging
+	[ "${status}" -ne 0 ]
+	[[ "${output}" == *"appearance is invalid"* ]]
 }
 
 @test "start rejects a missing configuration or base image" {
@@ -177,9 +209,11 @@ EOF
 	run "${VM_SCRIPT}" setup
 	[ "${status}" -eq 0 ]
 	[ "$(<"${TART_LOG}.build")" = "vm-vpn-base" ]
-	[ "$(<"${VM_VPN_BASE_MARKER}")" = "verified:2" ]
+	[ "$(<"${VM_VPN_BASE_MARKER}")" = "verified:4" ]
 	grep -Fxq 'delete vm-vpn-vault-staging' "${TART_LOG}"
 	grep -Fxq 'delete vm-vpn-demo-dev' "${TART_LOG}"
+	[[ "${output}" == *"removed old runtime for vault/staging; next start will recreate it from the new base image"* ]]
+	[[ "${output}" == *"removed old runtime for demo/dev; next start will recreate it from the new base image"* ]]
 }
 
 @test "setup replaces an unverified base while start rejects one" {
@@ -192,7 +226,7 @@ EOF
 	grep -Fxq 'stop vm-vpn-base' "${TART_LOG}"
 	grep -Fxq 'delete vm-vpn-base' "${TART_LOG}"
 	[ "$(<"${TART_LOG}.build")" = "vm-vpn-base" ]
-	[ "$(<"${VM_VPN_BASE_MARKER}")" = "verified:2" ]
+	[ "$(<"${VM_VPN_BASE_MARKER}")" = "verified:4" ]
 
 	mv "${VM_VPN_BASE_MARKER}" "${VM_VPN_BASE_MARKER}.rebuilt"
 	run "${VM_SCRIPT}" start demo dev

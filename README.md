@@ -89,6 +89,7 @@ Configs live outside the repository:
 
 ```text
 ~/.config/vm-vpn/<product>/<environment>/
+├── appearance.json
 ├── vpn/
 │   ├── corporate.ovpn
 │   └── production.ovpn
@@ -103,6 +104,10 @@ Configs live outside the repository:
   dots, underscores, and hyphens.
 - `bookmarks/bookmarks.json` defines its Firefox bookmark toolbar entries and
   starts with two placeholder entries to edit or replace.
+- `appearance.json` sets `wallpaperColor` to a six-digit hex color. New configs
+  use blue for `dev`, amber for `staging`, red for `prod`, purple for
+  `awsgov-prod`, orange for `preprod`, teal for `hybridtest`, and slate for
+  other environments. Edit the generated value to override it.
 - `shared/` contains other files that should be mounted read-only.
 
 Bookmark entries use this format:
@@ -197,10 +202,15 @@ Each config mounts only its own
   managed by this bootstrap are removed when mounted files change; manual AWS
   VPN Client profiles are left alone.
 - Replaces Firefox managed bookmarks with the mounted `bookmarks.json` entries.
+- Applies the mounted `appearance.json` color as the VM wallpaper.
 - Makes `shared/` available through the read-only workspace mount.
 
 This prevents VPN profiles and bookmarks from accumulating across configs.
 Host-file changes take effect the next time that config starts.
+
+Firefox starts on a blank page, keeps the bookmarks toolbar visible, omits its
+default import bookmark, and is configured as the default browser in the base
+image.
 
 While a config is running, stream the most recent guest bootstrap output and
 continue following both its normal and error logs with:

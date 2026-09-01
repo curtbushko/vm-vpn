@@ -8,6 +8,10 @@ setup() {
 	export AWS_VPN_CLIENT_LOG="${BATS_TEST_TMPDIR}/aws-vpn-client.log"
 	export VM_VPN_FIREFOX_POLICY_FILE="${BATS_TEST_TMPDIR}/guest/policies.json"
 	export VM_VPN_STATE_ROOT="${BATS_TEST_TMPDIR}/guest/state"
+	export VM_VPN_WALLPAPER_FILE="${BATS_TEST_TMPDIR}/guest/wallpaper.png"
+	export VM_VPN_SIPS="${BATS_TEST_TMPDIR}/bin/sips"
+	export VM_VPN_OSASCRIPT="${BATS_TEST_TMPDIR}/bin/osascript"
+	export APPEARANCE_LOG="${BATS_TEST_TMPDIR}/appearance.log"
 	mkdir -p "${BATS_TEST_TMPDIR}/bin" "${VM_VPN_WORKSPACE_ROOT}/vpn" "${VM_VPN_WORKSPACE_ROOT}/bookmarks" "$(dirname "${VM_VPN_FIREFOX_POLICY_FILE}")"
 	printf '{"policies":{"DisplayBookmarksToolbar":"always"}}\n' >"${VM_VPN_FIREFOX_POLICY_FILE}"
 	cat >"${VM_VPN_AWS_VPN_CLIENT}" <<'EOF'
@@ -16,6 +20,40 @@ set -euo pipefail
 printf '%s\n' "$*" >>"${AWS_VPN_CLIENT_LOG}"
 EOF
 	chmod 0755 "${VM_VPN_AWS_VPN_CLIENT}"
+	cat >"${VM_VPN_SIPS}" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+printf 'sips %s\n' "$*" >>"${APPEARANCE_LOG}"
+output="${*: -1}"
+printf 'png\n' >"$output"
+EOF
+	cat >"${VM_VPN_OSASCRIPT}" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+printf 'osascript %s\n' "$*" >>"${APPEARANCE_LOG}"
+EOF
+	chmod 0755 "${VM_VPN_SIPS}" "${VM_VPN_OSASCRIPT}"
+}
+
+@test "runtime bootstrap applies appearance changes as wallpaper" {
+	printf '[]\n' >"${VM_VPN_WORKSPACE_ROOT}/bookmarks/bookmarks.json"
+	printf '{"wallpaperColor":"#D97706"}\n' >"${VM_VPN_WORKSPACE_ROOT}/appearance.json"
+
+	run "${BOOTSTRAP_SCRIPT}"
+	[ "${status}" -eq 0 ]
+	grep -Fq 'sips -s format png' "${APPEARANCE_LOG}"
+	grep -Fq "osascript - ${VM_VPN_WALLPAPER_FILE}" "${APPEARANCE_LOG}"
+	[ -f "${VM_VPN_WALLPAPER_FILE}" ]
+
+	: >"${APPEARANCE_LOG}"
+	run "${BOOTSTRAP_SCRIPT}"
+	[ "${status}" -eq 0 ]
+	[ ! -s "${APPEARANCE_LOG}" ]
+
+	printf '{"wallpaperColor":"#B91C1C"}\n' >"${VM_VPN_WORKSPACE_ROOT}/appearance.json"
+	run "${BOOTSTRAP_SCRIPT}"
+	[ "${status}" -eq 0 ]
+	grep -Fq 'osascript' "${APPEARANCE_LOG}"
 }
 
 @test "runtime bootstrap replaces VPN and bookmark configuration between starts" {
