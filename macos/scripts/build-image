@@ -46,8 +46,8 @@ tart run "$BUILD_VM_NAME" &
 tart_pid=$!
 readonly tart_pid
 
-VM_NAME="$BUILD_VM_NAME" "${SCRIPT_DIR}/bootstrap-guest-agent"
-VM_NAME="$BUILD_VM_NAME" "${SCRIPT_DIR}/provision-vm"
+env VM_NAME="$BUILD_VM_NAME" "${SCRIPT_DIR}/bootstrap-guest-agent"
+env VM_NAME="$BUILD_VM_NAME" "${SCRIPT_DIR}/provision-vm"
 stop_build_guest
 wait "$tart_pid" || true
 trap - EXIT

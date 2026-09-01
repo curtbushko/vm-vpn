@@ -47,7 +47,13 @@ setup() {
 	grep -Fq 'tart rename "$BUILD_VM_NAME" "$VM_NAME"' "$build_script"
 	grep -Fq 'provision-vm' "$build_script"
 	grep -Fq 'bootstrap-guest-agent' "$build_script"
+	grep -Fq 'env VM_NAME="$BUILD_VM_NAME" "${SCRIPT_DIR}/bootstrap-guest-agent"' "$build_script"
+	grep -Fq 'env VM_NAME="$BUILD_VM_NAME" "${SCRIPT_DIR}/provision-vm"' "$build_script"
+	run grep -F 'VM_NAME="$BUILD_VM_NAME" "${SCRIPT_DIR}/bootstrap-guest-agent"' "$build_script"
+	[ "$status" -eq 0 ]
+	[[ "$output" == env\ * ]]
 	grep -Fq 'verify-image' "${REPO_ROOT}/macos/scripts/provision-vm"
+	grep -Fq 'install-apps configure-apps seal-image cleanup-apps verify-image' "${REPO_ROOT}/macos/scripts/provision-vm"
 	grep -Fq 'tart exec' "${REPO_ROOT}/macos/scripts/provision-vm"
 	grep -Fq 'sshpass -e /usr/bin/ssh -F /dev/null' "${REPO_ROOT}/macos/scripts/bootstrap-guest-agent"
 	grep -Fq 'networksetup -setdnsservers Ethernet 1.1.1.1 8.8.8.8' "${REPO_ROOT}/macos/scripts/bootstrap-guest-agent"
