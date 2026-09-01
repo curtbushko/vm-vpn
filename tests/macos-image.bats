@@ -73,6 +73,15 @@ setup() {
 	grep -Fq 'expected 3 Dock items' "$verify_script"
 }
 
+@test "macOS Dock customization is flushed before image shutdown" {
+	cleanup_script="${REPO_ROOT}/macos/scripts/cleanup-apps"
+	kill_line="$(grep -n '^killall Dock$' "$cleanup_script" | cut -d: -f1)"
+	sleep_line="$(grep -n '^sleep 2$' "$cleanup_script" | cut -d: -f1)"
+	sync_line="$(grep -n '^sync$' "$cleanup_script" | cut -d: -f1)"
+	[ "$kill_line" -lt "$sleep_line" ]
+	[ "$sleep_line" -lt "$sync_line" ]
+}
+
 @test "macOS vanilla bootstrap installs the Tart agent before first shutdown" {
 	grep -Fq 'tart-guest-agent-darwin-all.tar.gz' "${GUEST_AGENT_SCRIPT}"
 	grep -Fq 'launchctl bootstrap "gui/$(id -u)"' "${GUEST_AGENT_SCRIPT}"

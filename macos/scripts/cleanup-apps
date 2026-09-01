@@ -83,6 +83,10 @@ for app in "${dock_apps[@]}"; do
 	fi
 done
 killall Dock
+# Give macOS preference services time to persist the Dock before the image is
+# shut down, then flush the filesystem so clones inherit the customized state.
+sleep 2
+sync
 
 printf 'cleanup-apps: kept protected applications installed but hidden from the Dock:'
 printf ' %s' "${protected_apps[@]}"
