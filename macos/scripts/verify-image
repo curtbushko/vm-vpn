@@ -14,6 +14,11 @@ readonly -a expected_apps=(
 	"/Applications/Ghostty.app"
 	"/Applications/AWS VPN Client/AWS VPN Client.app"
 )
+readonly -a expected_dock_labels=(
+	"Firefox"
+	"Ghostty"
+	"AWS VPN Client"
+)
 
 for app in "${expected_apps[@]}"; do
 	if [[ ! -d "$app" ]]; then
@@ -30,9 +35,9 @@ if [[ "$dock_item_count" -ne 3 ]]; then
 	printf 'verify-image: expected 3 Dock items, found %s\n' "$dock_item_count" >&2
 	exit 1
 fi
-for app in "${expected_apps[@]}"; do
-	if ! printf '%s\n' "$dock_contents" | grep -Fq "$app"; then
-		printf 'verify-image: expected Dock application is missing: %s\n' "$app" >&2
+for label in "${expected_dock_labels[@]}"; do
+	if ! printf '%s\n' "$dock_contents" | grep -Fq "${label}"$'\t'; then
+		printf 'verify-image: expected Dock application is missing: %s\n' "$label" >&2
 		exit 1
 	fi
 done

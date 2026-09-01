@@ -67,6 +67,8 @@ setup() {
 	grep -Fq '/Applications/Firefox.app' "$verify_script"
 	grep -Fq '/Applications/Ghostty.app' "$verify_script"
 	grep -Fq '/Applications/AWS VPN Client/AWS VPN Client.app' "$verify_script"
+	grep -Fq 'expected_dock_labels' "$verify_script"
+	grep -Fq 'AWS VPN Client' "$verify_script"
 	grep -Fq 'dockutil --list' "$verify_script"
 	grep -Fq 'expected 3 Dock items' "$verify_script"
 }
