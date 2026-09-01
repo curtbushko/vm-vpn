@@ -8,6 +8,7 @@ REPO_ROOT="${VM_VPN_REPO_ROOT:-$(git rev-parse --show-toplevel 2>/dev/null || pw
 readonly REPO_ROOT
 readonly CONFIG_ROOT="${VM_VPN_CONFIG_HOME:-${XDG_CONFIG_HOME:-${HOME}/.config}/vm-vpn}"
 readonly BUILD_SCRIPT="${VM_VPN_BUILD_SCRIPT:-${REPO_ROOT}/macos/scripts/build-image}"
+readonly BASE_MARKER="${VM_VPN_BASE_MARKER:-${CONFIG_ROOT}/.base-image-ready}"
 
 fail() {
 	printf 'vm: %s\n' "$*" >&2
@@ -119,6 +120,15 @@ runtime_state() {
 	printf '%s\n' "$details" | tail -n 1 | awk '{ print $NF }'
 }
 
+base_image_is_verified() {
+	[[ -f "$BASE_MARKER" ]] && [[ "$(<"$BASE_MARKER")" == "verified" ]]
+}
+
+require_base_image() {
+	tart get "$BASE_VM_NAME" >/dev/null 2>&1 || fail "runtime image is unavailable; run: task setup"
+	base_image_is_verified || fail "base image exists but is not verified; rebuild it with: task image:build"
+}
+
 create_config() {
 	local config_path
 	config_path="$(workspace_path "$1" "$2")"
@@ -139,7 +149,7 @@ start_config() {
 		"$product" "$environment" "$bookmark_status" "$vpn_count"
 	vm_name="$(instance_name "$product" "$environment")"
 	require_command tart
-	tart get "$BASE_VM_NAME" >/dev/null 2>&1 || fail "runtime image is unavailable; run: task setup"
+	require_base_image
 	if ! tart get "$vm_name" >/dev/null 2>&1; then
 		printf 'runtime: creating from shared image\n'
 		tart clone "$BASE_VM_NAME" "$vm_name"
@@ -286,15 +296,24 @@ seed_demo() {
 build_image() {
 	[[ -x "$BUILD_SCRIPT" ]] || fail "build script is not executable: $BUILD_SCRIPT"
 	"$BUILD_SCRIPT" "$BASE_VM_NAME"
+	umask 077
+	install -d -m 0700 "$(dirname "$BASE_MARKER")"
+	printf 'verified\n' >"$BASE_MARKER"
+	chmod 0600 "$BASE_MARKER"
 }
 
 setup_runtime() {
 	require_command tart
 	if tart get "$BASE_VM_NAME" >/dev/null 2>&1; then
-		printf 'runtime image is ready\n'
-	else
-		build_image
+		if base_image_is_verified; then
+			printf 'runtime image is ready\n'
+			return 0
+		fi
+		printf 'runtime: replacing unverified base image\n'
+		tart stop "$BASE_VM_NAME" >/dev/null 2>&1 || true
+		tart delete "$BASE_VM_NAME"
 	fi
+	build_image
 }
 
 image_status() {

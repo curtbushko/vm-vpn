@@ -8,9 +8,11 @@ setup() {
 	export VM_VPN_BUILD_SCRIPT="${BATS_TEST_TMPDIR}/build-image"
 	export TART_LOG="${BATS_TEST_TMPDIR}/tart.log"
 	export TART_INSTANCES="${BATS_TEST_TMPDIR}/instances"
+	export VM_VPN_BASE_MARKER="${BATS_TEST_TMPDIR}/base-image-ready"
 	export PATH="${BATS_TEST_TMPDIR}/bin:${PATH}"
 	mkdir -p "${BATS_TEST_TMPDIR}/bin"
 	: >"${TART_INSTANCES}"
+	printf 'verified\n' >"${VM_VPN_BASE_MARKER}"
 
 	cat >"${BATS_TEST_TMPDIR}/bin/tart" <<'EOF'
 #!/usr/bin/env bash
@@ -170,9 +172,29 @@ EOF
 	[ ! -e "${TART_LOG}.build" ]
 
 	export TART_BASE_MISSING=1
+	mv "${VM_VPN_BASE_MARKER}" "${VM_VPN_BASE_MARKER}.missing"
 	run "${VM_SCRIPT}" setup
 	[ "${status}" -eq 0 ]
 	[ "$(<"${TART_LOG}.build")" = "vm-vpn-base" ]
+	[ "$(<"${VM_VPN_BASE_MARKER}")" = "verified" ]
+}
+
+@test "setup replaces an unverified base while start rejects one" {
+	mv "${VM_VPN_BASE_MARKER}" "${VM_VPN_BASE_MARKER}.missing"
+	"${VM_SCRIPT}" create demo dev
+
+	run "${VM_SCRIPT}" setup
+	[ "${status}" -eq 0 ]
+	[[ "${output}" == *"replacing unverified base image"* ]]
+	grep -Fxq 'stop vm-vpn-base' "${TART_LOG}"
+	grep -Fxq 'delete vm-vpn-base' "${TART_LOG}"
+	[ "$(<"${TART_LOG}.build")" = "vm-vpn-base" ]
+	[ "$(<"${VM_VPN_BASE_MARKER}")" = "verified" ]
+
+	mv "${VM_VPN_BASE_MARKER}" "${VM_VPN_BASE_MARKER}.rebuilt"
+	run "${VM_SCRIPT}" start demo dev
+	[ "${status}" -ne 0 ]
+	[[ "${output}" == *"base image exists but is not verified"* ]]
 }
 
 @test "clean deletes runtime clones whose configs no longer exist" {

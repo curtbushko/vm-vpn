@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+export PATH="/opt/homebrew/bin:${PATH}"
+
+if ! command -v dockutil >/dev/null 2>&1; then
+	printf 'verify-image: dockutil is required\n' >&2
+	exit 1
+fi
+
+readonly -a expected_apps=(
+	"/Applications/Firefox.app"
+	"/Applications/Ghostty.app"
+	"/Applications/AWS VPN Client/AWS VPN Client.app"
+)
+
+for app in "${expected_apps[@]}"; do
+	if [[ ! -d "$app" ]]; then
+		printf 'verify-image: expected application is missing: %s\n' "$app" >&2
+		exit 1
+	fi
+done
+
+dock_contents="$(dockutil --list)"
+readonly dock_contents
+dock_item_count="$(printf '%s\n' "$dock_contents" | awk 'NF { count++ } END { print count + 0 }')"
+readonly dock_item_count
+if [[ "$dock_item_count" -ne 3 ]]; then
+	printf 'verify-image: expected 3 Dock items, found %s\n' "$dock_item_count" >&2
+	exit 1
+fi
+for app in "${expected_apps[@]}"; do
+	if ! printf '%s\n' "$dock_contents" | grep -Fq "$app"; then
+		printf 'verify-image: expected Dock application is missing: %s\n' "$app" >&2
+		exit 1
+	fi
+done
+
+printf 'verify-image: customized applications and Dock are ready\n'

@@ -263,6 +263,12 @@ two virtual CPUs, 6 GB of memory, and a sparse 50 GB raw disk that has occupied
 about 28 GB after provisioning. Its Cirrus Labs Sequoia vanilla source is about
 24 GB compressed. Rosetta is not used.
 
+Image creation provisions a temporary `vm-vpn-base-building` VM and verifies
+the installed applications and three-item Dock before publishing it as
+`vm-vpn-base`. A failed or interrupted customization therefore cannot be
+mistaken for a ready base image. `task setup` replaces an older, unverified
+base, while `task start` refuses to clone from one.
+
 Real AWS authentication, SAML browser handoff, DNS, private routes, and internal
 resources still require an interactive acceptance test with a real profile.
 The complete workflow also needs a fresh-machine acceptance run on a second Mac

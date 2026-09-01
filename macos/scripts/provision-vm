@@ -32,6 +32,6 @@ if ! tart exec -i "$VM_NAME" /bin/bash -c \
 	exit 1
 fi
 
-for guest_script in install-apps configure-apps cleanup-apps seal-image; do
+for guest_script in install-apps configure-apps cleanup-apps seal-image verify-image; do
 	tart exec -i "$VM_NAME" /bin/bash -s <"${SCRIPT_DIR}/${guest_script}"
 done

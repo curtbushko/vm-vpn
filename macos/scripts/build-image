@@ -7,7 +7,7 @@ readonly SCRIPT_DIR
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 readonly REPO_ROOT
 readonly VM_NAME="${1:-vm-vpn-base}"
-export VM_NAME
+readonly BUILD_VM_NAME="${VM_NAME}-building"
 
 for command in packer tart; do
 	if ! command -v "$command" >/dev/null 2>&1; then
@@ -20,10 +20,14 @@ if tart get "$VM_NAME" >/dev/null 2>&1; then
 	printf 'build-image: VM already exists: %s\n' "$VM_NAME" >&2
 	exit 1
 fi
+if tart get "$BUILD_VM_NAME" >/dev/null 2>&1; then
+	tart stop "$BUILD_VM_NAME" >/dev/null 2>&1 || true
+	tart delete "$BUILD_VM_NAME"
+fi
 
 stop_build_guest() {
-	if tart get "$VM_NAME" 2>/dev/null | tail -n 1 | grep -q 'running$'; then
-		tart stop "$VM_NAME"
+	if tart get "$BUILD_VM_NAME" 2>/dev/null | tail -n 1 | grep -q 'running$'; then
+		tart stop "$BUILD_VM_NAME"
 	fi
 }
 trap stop_build_guest EXIT
@@ -31,21 +35,22 @@ trap stop_build_guest EXIT
 cd "$REPO_ROOT"
 packer init macos/packer/vpn-workspace.pkr.hcl
 packer build -color=false \
-	-var "vm_name=${VM_NAME}" \
+	-var "vm_name=${BUILD_VM_NAME}" \
 	macos/packer/vpn-workspace.pkr.hcl
 
 # Let Virtualization.Framework release Packer's cloned disk before the
 # provisioning boot. Keep Tart attached to this terminal because detached
 # AppKit launches can fail to start guests on current macOS hosts.
 sleep 5
-tart run "$VM_NAME" &
+tart run "$BUILD_VM_NAME" &
 tart_pid=$!
 readonly tart_pid
 
-"${SCRIPT_DIR}/bootstrap-guest-agent"
-"${SCRIPT_DIR}/provision-vm"
+VM_NAME="$BUILD_VM_NAME" "${SCRIPT_DIR}/bootstrap-guest-agent"
+VM_NAME="$BUILD_VM_NAME" "${SCRIPT_DIR}/provision-vm"
 stop_build_guest
 wait "$tart_pid" || true
 trap - EXIT
+tart rename "$BUILD_VM_NAME" "$VM_NAME"
 tart get "$VM_NAME"
 printf 'built immutable macOS appliance %s\n' "$VM_NAME"

@@ -43,12 +43,23 @@ setup() {
 	grep -Fq 'packer build' "$build_script"
 	grep -Fq 'macos/packer/vpn-workspace.pkr.hcl' "$build_script"
 	grep -Fq 'tart get' "$build_script"
-	grep -Fq 'tart run "$VM_NAME" &' "$build_script"
+	grep -Fq 'tart run "$BUILD_VM_NAME" &' "$build_script"
+	grep -Fq 'tart rename "$BUILD_VM_NAME" "$VM_NAME"' "$build_script"
 	grep -Fq 'provision-vm' "$build_script"
 	grep -Fq 'bootstrap-guest-agent' "$build_script"
+	grep -Fq 'verify-image' "${REPO_ROOT}/macos/scripts/provision-vm"
 	grep -Fq 'tart exec' "${REPO_ROOT}/macos/scripts/provision-vm"
 	grep -Fq 'sshpass -e /usr/bin/ssh -F /dev/null' "${REPO_ROOT}/macos/scripts/bootstrap-guest-agent"
 	grep -Fq 'networksetup -setdnsservers Ethernet 1.1.1.1 8.8.8.8' "${REPO_ROOT}/macos/scripts/bootstrap-guest-agent"
+}
+
+@test "macOS image verification requires customized apps and Dock" {
+	verify_script="${REPO_ROOT}/macos/scripts/verify-image"
+	grep -Fq '/Applications/Firefox.app' "$verify_script"
+	grep -Fq '/Applications/Ghostty.app' "$verify_script"
+	grep -Fq '/Applications/AWS VPN Client/AWS VPN Client.app' "$verify_script"
+	grep -Fq 'dockutil --list' "$verify_script"
+	grep -Fq 'expected 3 Dock items' "$verify_script"
 }
 
 @test "macOS vanilla bootstrap installs the Tart agent before first shutdown" {
