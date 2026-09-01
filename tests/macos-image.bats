@@ -86,7 +86,9 @@ setup() {
 
 @test "macOS vanilla bootstrap installs the Tart agent before first shutdown" {
 	grep -Fq 'tart-guest-agent-darwin-all.tar.gz' "${GUEST_AGENT_SCRIPT}"
-	grep -Fq 'launchctl bootstrap "gui/$(id -u)"' "${GUEST_AGENT_SCRIPT}"
+	grep -Fq 'launchctl bootstrap "$agent_domain"' "${GUEST_AGENT_SCRIPT}"
+	grep -Fq 'launchctl print "${agent_domain}/org.openai.tart-guest-agent"' "${GUEST_AGENT_SCRIPT}"
+	grep -Fq 'guest agent did not register after 10 attempts' "${GUEST_AGENT_SCRIPT}"
 }
 
 @test "macOS image installs only the required third-party applications" {

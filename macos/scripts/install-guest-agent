@@ -25,5 +25,21 @@ cat >"${AGENT_PLIST}" <<EOF
 </plist>
 EOF
 chmod 0600 "${AGENT_PLIST}"
-launchctl bootout "gui/$(id -u)/org.openai.tart-guest-agent" 2>/dev/null || true
-launchctl bootstrap "gui/$(id -u)" "${AGENT_PLIST}"
+agent_domain="gui/$(id -u)"
+readonly agent_domain
+launchctl bootout "${agent_domain}/org.openai.tart-guest-agent" 2>/dev/null || true
+
+bootstrap_attempt=0
+while ((bootstrap_attempt < 10)); do
+	if launchctl bootstrap "$agent_domain" "${AGENT_PLIST}" 2>/dev/null; then
+		exit 0
+	fi
+	if launchctl print "${agent_domain}/org.openai.tart-guest-agent" >/dev/null 2>&1; then
+		exit 0
+	fi
+	((bootstrap_attempt += 1))
+	sleep 2
+done
+
+printf 'install-guest-agent: guest agent did not register after 10 attempts\n' >&2
+exit 1
