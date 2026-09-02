@@ -3,7 +3,7 @@
 set -euo pipefail
 
 readonly BASE_VM_NAME="vm-vpn-base"
-readonly BASE_IMAGE_VERSION="9"
+readonly BASE_IMAGE_VERSION="10"
 readonly INSTANCE_PREFIX="vm-vpn-"
 REPO_ROOT="${VM_VPN_REPO_ROOT:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}"
 readonly REPO_ROOT

@@ -10,6 +10,7 @@ setup() {
 	export VM_VPN_STATE_ROOT="${BATS_TEST_TMPDIR}/guest/state"
 	export VM_VPN_WALLPAPER_FILE="${BATS_TEST_TMPDIR}/guest/wallpaper.png"
 	export VM_VPN_SIPS="${BATS_TEST_TMPDIR}/bin/sips"
+	export VM_VPN_OSASCRIPT="${BATS_TEST_TMPDIR}/bin/osascript"
 	export APPEARANCE_LOG="${BATS_TEST_TMPDIR}/appearance.log"
 	mkdir -p "${BATS_TEST_TMPDIR}/bin" "${VM_VPN_WORKSPACE_ROOT}/vpn" "${VM_VPN_WORKSPACE_ROOT}/bookmarks" "$(dirname "${VM_VPN_FIREFOX_POLICY_FILE}")"
 	printf '{"policies":{"DisplayBookmarksToolbar":"always"}}\n' >"${VM_VPN_FIREFOX_POLICY_FILE}"
@@ -26,16 +27,22 @@ printf 'sips %s\n' "$*" >>"${APPEARANCE_LOG}"
 output="${*: -1}"
 printf 'png\n' >"$output"
 EOF
-	chmod 0755 "${VM_VPN_SIPS}"
+	cat >"${VM_VPN_OSASCRIPT}" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+printf 'osascript %s\n' "$*" >>"${APPEARANCE_LOG}"
+EOF
+	chmod 0755 "${VM_VPN_SIPS}" "${VM_VPN_OSASCRIPT}"
 }
 
-@test "runtime bootstrap generates an appearance image without applying it" {
+@test "runtime bootstrap applies the generated wallpaper through System Events" {
 	printf '[]\n' >"${VM_VPN_WORKSPACE_ROOT}/bookmarks/bookmarks.json"
 	printf '{"wallpaperColor":"#D97706"}\n' >"${VM_VPN_WORKSPACE_ROOT}/appearance.json"
 
 	run "${BOOTSTRAP_SCRIPT}"
 	[ "${status}" -eq 0 ]
 	grep -Fq 'sips -s format png' "${APPEARANCE_LOG}"
+	grep -Fq "osascript - ${VM_VPN_WALLPAPER_FILE}" "${APPEARANCE_LOG}"
 	[ -f "${VM_VPN_WALLPAPER_FILE}" ]
 
 	: >"${APPEARANCE_LOG}"
@@ -49,11 +56,12 @@ EOF
 	grep -Fq 'sips -s format png' "${APPEARANCE_LOG}"
 }
 
-@test "runtime bootstrap does not change synchronized desktop preferences" {
+@test "runtime bootstrap applies bookmarks before requesting wallpaper automation" {
 	bookmark_line="$(grep -n 'workspace_bookmarks' "${BOOTSTRAP_SCRIPT}" | tail -n 1 | cut -d: -f1)"
-	appearance_line="$(grep -n '^[[:space:]]*"$SIPS" ' "${BOOTSTRAP_SCRIPT}" | cut -d: -f1)"
+	appearance_line="$(grep -n '^[[:space:]]*"$OSASCRIPT" ' "${BOOTSTRAP_SCRIPT}" | cut -d: -f1)"
 	[ "$bookmark_line" -lt "$appearance_line" ]
-	run grep -E 'com\.apple\.desktop|WallpaperAgent|osascript|System Events' "${BOOTSTRAP_SCRIPT}"
+	grep -Fq 'tell application "System Events"' "${BOOTSTRAP_SCRIPT}"
+	run grep -E 'com\.apple\.desktop|WallpaperAgent' "${BOOTSTRAP_SCRIPT}"
 	[ "${status}" -ne 0 ]
 }
 

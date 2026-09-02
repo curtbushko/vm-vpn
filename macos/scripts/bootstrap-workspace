@@ -14,6 +14,7 @@ readonly VPN_MANIFEST="${STATE_ROOT}/vpn-profiles"
 readonly WALLPAPER_FILE="${VM_VPN_WALLPAPER_FILE:-${STATE_ROOT}/wallpaper.png}"
 readonly WALLPAPER_SOURCE_FILE="${STATE_ROOT}/wallpaper.ppm"
 readonly SIPS="${VM_VPN_SIPS:-/usr/bin/sips}"
+readonly OSASCRIPT="${VM_VPN_OSASCRIPT:-/usr/bin/osascript}"
 
 [[ -d "$WORKSPACE_ROOT" ]] || exit 0
 
@@ -96,6 +97,10 @@ if [[ -f "$APPEARANCE_SOURCE" ]]; then
 		printf 'bootstrap-workspace: sips is required\n' >&2
 		exit 1
 	}
+	[[ -x "$OSASCRIPT" ]] || {
+		printf 'bootstrap-workspace: osascript is required\n' >&2
+		exit 1
+	}
 	wallpaper_color="$(jq -er '.wallpaperColor | select(test("^#[0-9A-Fa-f]{6}$"))' "$APPEARANCE_SOURCE")" || {
 		printf 'bootstrap-workspace: appearance wallpaperColor must be a six-digit hex color\n' >&2
 		exit 1
@@ -108,6 +113,15 @@ if [[ -f "$APPEARANCE_SOURCE" ]]; then
 		blue="$((16#${wallpaper_color:5:2}))"
 		printf 'P3\n1 1\n255\n%s %s %s\n' "$red" "$green" "$blue" >"$WALLPAPER_SOURCE_FILE"
 		"$SIPS" -s format png "$WALLPAPER_SOURCE_FILE" --out "$WALLPAPER_FILE" >/dev/null
+		"$OSASCRIPT" - "$WALLPAPER_FILE" <<'EOF'
+on run arguments
+  tell application "System Events"
+    repeat with desktop_item in desktops
+      set picture of desktop_item to POSIX file (item 1 of arguments)
+    end repeat
+  end tell
+end run
+EOF
 		printf '%s\n' "$appearance_checksum" >"${STATE_ROOT}/appearance.checksum"
 		chmod 0600 "${STATE_ROOT}/appearance.checksum" "$WALLPAPER_FILE" "$WALLPAPER_SOURCE_FILE"
 	fi
