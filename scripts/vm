@@ -3,7 +3,7 @@
 set -euo pipefail
 
 readonly BASE_VM_NAME="vm-vpn-base"
-readonly BASE_IMAGE_VERSION="10"
+readonly BASE_IMAGE_VERSION="11"
 readonly INSTANCE_PREFIX="vm-vpn-"
 REPO_ROOT="${VM_VPN_REPO_ROOT:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}"
 readonly REPO_ROOT
@@ -49,13 +49,25 @@ instance_name() {
 
 appearance_color() {
 	case "$1" in
-	dev) printf '#2563EB\n' ;;
-	staging) printf '#D97706\n' ;;
-	prod) printf '#B91C1C\n' ;;
-	awsgov-prod) printf '#6D28D9\n' ;;
-	preprod) printf '#C2410C\n' ;;
-	hybridtest) printf '#0F766E\n' ;;
+	dev) printf '#7895A8\n' ;;
+	staging) printf '#5F7F95\n' ;;
+	prod) printf '#465F70\n' ;;
+	hybridtest) printf '#B77A7A\n' ;;
+	preprod) printf '#965E5E\n' ;;
+	awsgov-prod) printf '#744747\n' ;;
 	*) printf '#374151\n' ;;
+	esac
+}
+
+is_legacy_appearance_color() {
+	case "$1:$2" in
+	dev:#2563EB | dev:#0EA5E9 | \
+		staging:#D97706 | staging:#2563EB | \
+		prod:#B91C1C | prod:#1E3A8A | \
+		hybridtest:#0F766E | hybridtest:#FB7185 | \
+		preprod:#C2410C | preprod:#DC2626 | \
+		awsgov-prod:#6D28D9 | awsgov-prod:#7F1D1D) return 0 ;;
+	*) return 1 ;;
 	esac
 }
 
@@ -66,6 +78,18 @@ write_appearance() {
 	wallpaper_color="$(appearance_color "$environment")"
 	printf '{\n  "wallpaperColor": "%s"\n}\n' "$wallpaper_color" >"$config_path/appearance.json"
 	chmod 0600 "$config_path/appearance.json"
+}
+
+migrate_appearance() {
+	local config_path="$1"
+	local environment="$2"
+	local appearance_file="${config_path}/appearance.json"
+	local current_color
+	[[ -f "$appearance_file" ]] || return 0
+	current_color="$(jq -r '.wallpaperColor // empty' "$appearance_file" 2>/dev/null || true)"
+	if is_legacy_appearance_color "$environment" "$current_color"; then
+		write_appearance "$config_path" "$environment"
+	fi
 }
 
 initialize_workspace() {
@@ -179,6 +203,7 @@ start_config() {
 	local environment="$2"
 	local config_path vm_name bookmark_status appearance_status vpn_count
 	config_path="$(require_workspace "$product" "$environment")"
+	migrate_appearance "$config_path" "$environment"
 	if [[ "$(appearance_state "$config_path")" == "missing" ]]; then
 		write_appearance "$config_path" "$environment"
 	fi

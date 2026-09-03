@@ -123,6 +123,7 @@ setup() {
 	grep -Fq 'DisplayBookmarksToolbar' "${CONFIGURE_SCRIPT}"
 	grep -Fq 'bitwarden-password-manager' "${CONFIGURE_SCRIPT}"
 	grep -Fq '1password-x-password-manager' "${CONFIGURE_SCRIPT}"
+	[ "$(grep -Fc '"default_area": "navbar"' "${CONFIGURE_SCRIPT}")" -eq 2 ]
 	grep -Fq 'tart-guest-agent --run-agent' "${CONFIGURE_SCRIPT}"
 	grep -Fq 'AppleLanguages' "${CONFIGURE_SCRIPT}"
 	grep -Fq 'AppleLocale' "${CONFIGURE_SCRIPT}"

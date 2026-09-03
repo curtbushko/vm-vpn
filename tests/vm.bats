@@ -12,7 +12,7 @@ setup() {
 	export PATH="${BATS_TEST_TMPDIR}/bin:${PATH}"
 	mkdir -p "${BATS_TEST_TMPDIR}/bin"
 	: >"${TART_INSTANCES}"
-	printf 'verified:10\n' >"${VM_VPN_BASE_MARKER}"
+	printf 'verified:11\n' >"${VM_VPN_BASE_MARKER}"
 
 	cat >"${BATS_TEST_TMPDIR}/bin/tart" <<'EOF'
 #!/usr/bin/env bash
@@ -56,7 +56,7 @@ EOF
 	[ -d "${VM_VPN_CONFIG_HOME}/demo/dev/vpn" ]
 	[ -d "${VM_VPN_CONFIG_HOME}/demo/dev/bookmarks" ]
 	[ -d "${VM_VPN_CONFIG_HOME}/demo/dev/shared" ]
-	[ "$(jq -r '.wallpaperColor' "${VM_VPN_CONFIG_HOME}/demo/dev/appearance.json")" = "#2563EB" ]
+	[ "$(jq -r '.wallpaperColor' "${VM_VPN_CONFIG_HOME}/demo/dev/appearance.json")" = "#7895A8" ]
 	[ "$(jq -r 'length' "${VM_VPN_CONFIG_HOME}/demo/dev/bookmarks/bookmarks.json")" -eq 2 ]
 	[ "$(jq -r '.[0].title' "${VM_VPN_CONFIG_HOME}/demo/dev/bookmarks/bookmarks.json")" = "Company documentation" ]
 	[ "$(jq -r '.[0].url' "${VM_VPN_CONFIG_HOME}/demo/dev/bookmarks/bookmarks.json")" = "https://docs.example.com/" ]
@@ -75,14 +75,33 @@ EOF
 		"${VM_SCRIPT}" create demo "$environment"
 		[ "$(jq -r '.wallpaperColor' "${VM_VPN_CONFIG_HOME}/demo/${environment}/appearance.json")" = "$expected_color" ]
 	done <<'EOF'
-dev #2563EB
-staging #D97706
-prod #B91C1C
-awsgov-prod #6D28D9
-preprod #C2410C
-hybridtest #0F766E
+dev #7895A8
+staging #5F7F95
+prod #465F70
+hybridtest #B77A7A
+preprod #965E5E
+awsgov-prod #744747
 qa #374151
 EOF
+}
+
+@test "start migrates legacy generated colors without replacing custom colors" {
+	"${VM_SCRIPT}" create demo staging
+	printf '{"wallpaperColor":"#D97706"}\n' >"${VM_VPN_CONFIG_HOME}/demo/staging/appearance.json"
+
+	run "${VM_SCRIPT}" start demo staging
+	[ "${status}" -eq 0 ]
+	[ "$(jq -r '.wallpaperColor' "${VM_VPN_CONFIG_HOME}/demo/staging/appearance.json")" = "#5F7F95" ]
+
+	printf '{"wallpaperColor":"#2563EB"}\n' >"${VM_VPN_CONFIG_HOME}/demo/staging/appearance.json"
+	run "${VM_SCRIPT}" start demo staging
+	[ "${status}" -eq 0 ]
+	[ "$(jq -r '.wallpaperColor' "${VM_VPN_CONFIG_HOME}/demo/staging/appearance.json")" = "#5F7F95" ]
+
+	printf '{"wallpaperColor":"#ABCDEF"}\n' >"${VM_VPN_CONFIG_HOME}/demo/staging/appearance.json"
+	run "${VM_SCRIPT}" start demo staging
+	[ "${status}" -eq 0 ]
+	[ "$(jq -r '.wallpaperColor' "${VM_VPN_CONFIG_HOME}/demo/staging/appearance.json")" = "#ABCDEF" ]
 }
 
 @test "start lazily creates and then reuses the hidden runtime clone" {
@@ -109,7 +128,7 @@ EOF
 
 	run "${VM_SCRIPT}" start demo staging
 	[ "${status}" -eq 0 ]
-	[ "$(jq -r '.wallpaperColor' "${VM_VPN_CONFIG_HOME}/demo/staging/appearance.json")" = "#D97706" ]
+	[ "$(jq -r '.wallpaperColor' "${VM_VPN_CONFIG_HOME}/demo/staging/appearance.json")" = "#5F7F95" ]
 	[[ "${output}" == *"appearance: valid"* ]]
 
 	printf '{"wallpaperColor":"orange"}\n' >"${VM_VPN_CONFIG_HOME}/demo/staging/appearance.json"
@@ -209,7 +228,7 @@ EOF
 	run "${VM_SCRIPT}" setup
 	[ "${status}" -eq 0 ]
 	[ "$(<"${TART_LOG}.build")" = "vm-vpn-base" ]
-	[ "$(<"${VM_VPN_BASE_MARKER}")" = "verified:10" ]
+	[ "$(<"${VM_VPN_BASE_MARKER}")" = "verified:11" ]
 	grep -Fxq 'delete vm-vpn-vault-staging' "${TART_LOG}"
 	grep -Fxq 'delete vm-vpn-demo-dev' "${TART_LOG}"
 	[[ "${output}" == *"removed old runtime for vault/staging; next start will recreate it from the new base image"* ]]
@@ -226,7 +245,7 @@ EOF
 	grep -Fxq 'stop vm-vpn-base' "${TART_LOG}"
 	grep -Fxq 'delete vm-vpn-base' "${TART_LOG}"
 	[ "$(<"${TART_LOG}.build")" = "vm-vpn-base" ]
-	[ "$(<"${VM_VPN_BASE_MARKER}")" = "verified:10" ]
+	[ "$(<"${VM_VPN_BASE_MARKER}")" = "verified:11" ]
 
 	mv "${VM_VPN_BASE_MARKER}" "${VM_VPN_BASE_MARKER}.rebuilt"
 	run "${VM_SCRIPT}" start demo dev
