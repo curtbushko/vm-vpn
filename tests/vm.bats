@@ -12,7 +12,7 @@ setup() {
 	export PATH="${BATS_TEST_TMPDIR}/bin:${PATH}"
 	mkdir -p "${BATS_TEST_TMPDIR}/bin"
 	: >"${TART_INSTANCES}"
-	printf 'verified:11\n' >"${VM_VPN_BASE_MARKER}"
+	printf 'verified:12\n' >"${VM_VPN_BASE_MARKER}"
 
 	cat >"${BATS_TEST_TMPDIR}/bin/tart" <<'EOF'
 #!/usr/bin/env bash
@@ -228,7 +228,7 @@ EOF
 	run "${VM_SCRIPT}" setup
 	[ "${status}" -eq 0 ]
 	[ "$(<"${TART_LOG}.build")" = "vm-vpn-base" ]
-	[ "$(<"${VM_VPN_BASE_MARKER}")" = "verified:11" ]
+	[ "$(<"${VM_VPN_BASE_MARKER}")" = "verified:12" ]
 	grep -Fxq 'delete vm-vpn-vault-staging' "${TART_LOG}"
 	grep -Fxq 'delete vm-vpn-demo-dev' "${TART_LOG}"
 	[[ "${output}" == *"removed old runtime for vault/staging; next start will recreate it from the new base image"* ]]
@@ -245,7 +245,7 @@ EOF
 	grep -Fxq 'stop vm-vpn-base' "${TART_LOG}"
 	grep -Fxq 'delete vm-vpn-base' "${TART_LOG}"
 	[ "$(<"${TART_LOG}.build")" = "vm-vpn-base" ]
-	[ "$(<"${VM_VPN_BASE_MARKER}")" = "verified:11" ]
+	[ "$(<"${VM_VPN_BASE_MARKER}")" = "verified:12" ]
 
 	mv "${VM_VPN_BASE_MARKER}" "${VM_VPN_BASE_MARKER}.rebuilt"
 	run "${VM_SCRIPT}" start demo dev

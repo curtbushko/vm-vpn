@@ -36,6 +36,18 @@ sudo tee "${FIREFOX_POLICY_FILE}" >/dev/null <<'EOF'
     },
     "NewTabPage": false,
     "NoDefaultBookmarks": true,
+    "OverrideFirstRunPage": "",
+    "OverridePostUpdatePage": "",
+    "DisableProfileImport": true,
+    "DontCheckDefaultBrowser": true,
+    "SkipTermsOfUse": true,
+    "UserMessaging": {
+      "SkipOnboarding": true,
+      "ExtensionRecommendations": false,
+      "FeatureRecommendations": false,
+      "MoreFromMozilla": false,
+      "Locked": true
+    },
     "ManagedBookmarks": [
       { "toplevel_name": "VM VPN" }
     ],
