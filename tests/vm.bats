@@ -235,6 +235,15 @@ EOF
 	[[ "${output}" == *"removed old runtime for demo/dev; next start will recreate it from the new base image"* ]]
 }
 
+@test "image:build replaces an existing base image without a separate delete" {
+	run "${VM_SCRIPT}" image-build
+	[ "${status}" -eq 0 ]
+	grep -Fxq 'stop vm-vpn-base' "${TART_LOG}"
+	grep -Fxq 'delete vm-vpn-base' "${TART_LOG}"
+	[ "$(<"${TART_LOG}.build")" = "vm-vpn-base" ]
+	[ "$(<"${VM_VPN_BASE_MARKER}")" = "verified:12" ]
+}
+
 @test "setup replaces an unverified base while start rejects one" {
 	mv "${VM_VPN_BASE_MARKER}" "${VM_VPN_BASE_MARKER}.missing"
 	"${VM_SCRIPT}" create demo dev

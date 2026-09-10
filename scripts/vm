@@ -378,6 +378,11 @@ seed_demo() {
 
 build_image() {
 	[[ -x "$BUILD_SCRIPT" ]] || fail "build script is not executable: $BUILD_SCRIPT"
+	require_command tart
+	if tart get "$BASE_VM_NAME" >/dev/null 2>&1; then
+		tart stop "$BASE_VM_NAME" >/dev/null 2>&1 || true
+		tart delete "$BASE_VM_NAME"
+	fi
 	"$BUILD_SCRIPT" "$BASE_VM_NAME"
 	umask 077
 	install -d -m 0700 "$(dirname "$BASE_MARKER")"
