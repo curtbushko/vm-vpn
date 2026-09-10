@@ -81,6 +81,19 @@ EOF
 	grep -Fq 'pkill -x firefox' "${PKILL_LOG}"
 }
 
+@test "runtime bootstrap announces the permissions prompt on first boot only" {
+	printf '[]\n' >"${VM_VPN_WORKSPACE_ROOT}/bookmarks/bookmarks.json"
+
+	run "${BOOTSTRAP_SCRIPT}"
+	[ "${status}" -eq 0 ]
+	printf '%s\n' "${output}" | grep -Fq 'first boot: accept the macOS permissions prompts'
+
+	run "${BOOTSTRAP_SCRIPT}"
+	[ "${status}" -eq 0 ]
+	run bash -c 'printf "%s\n" "$1" | grep -Fq "first boot"' _ "${output}"
+	[ "${status}" -ne 0 ]
+}
+
 @test "runtime bootstrap quits AWS VPN Client only when profiles change" {
 	printf '[]\n' >"${VM_VPN_WORKSPACE_ROOT}/bookmarks/bookmarks.json"
 	printf 'remote dev.example.com 443\n' >"${VM_VPN_WORKSPACE_ROOT}/vpn/development.ovpn"

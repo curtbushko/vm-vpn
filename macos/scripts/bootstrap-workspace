@@ -25,6 +25,14 @@ readonly PKILL="${VM_VPN_PKILL:-/usr/bin/pkill}"
 }
 
 install -d -m 0700 "$STATE_ROOT"
+
+readonly FIRST_BOOT_MARKER="${STATE_ROOT}/first-boot"
+if [[ ! -f "$FIRST_BOOT_MARKER" ]]; then
+	printf 'bootstrap-workspace: first boot: accept the macOS permissions prompts for automation and networking so VPN and desktop configuration can complete\n'
+	: >"$FIRST_BOOT_MARKER"
+	chmod 0600 "$FIRST_BOOT_MARKER"
+fi
+
 vpn_sources=()
 desired_vpn_manifest=""
 for vpn_source in "${WORKSPACE_ROOT}"/vpn/*.ovpn; do
