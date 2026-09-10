@@ -69,6 +69,8 @@ sudo tee "${FIREFOX_POLICY_FILE}" >/dev/null <<'EOF'
       "browser.toolbars.bookmarks.visibility": "always",
       "intl.accept_languages": "en-US, en",
       "intl.locale.requested": "en-US",
+      "security.webauthn.enable_macos_passkeys": false,
+      "security.webauth.webauthn_enable_softtoken": true,
       "ui.systemUsesDarkTheme": 1
     }
   }

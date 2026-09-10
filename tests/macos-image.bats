@@ -140,6 +140,8 @@ setup() {
 	grep -Fq '"DontCheckDefaultBrowser": true' "${CONFIGURE_SCRIPT}"
 	grep -Fq '"SkipTermsOfUse": true' "${CONFIGURE_SCRIPT}"
 	grep -Fq '"SkipOnboarding": true' "${CONFIGURE_SCRIPT}"
+	grep -Fq '"security.webauthn.enable_macos_passkeys": false' "${CONFIGURE_SCRIPT}"
+	grep -Fq '"security.webauth.webauthn_enable_softtoken": true' "${CONFIGURE_SCRIPT}"
 	grep -Fq 'com.apple.LaunchServices/com.apple.launchservices.secure' "${CONFIGURE_SCRIPT}"
 	grep -Fq 'LSHandlerURLScheme = http' "${CONFIGURE_SCRIPT}"
 	grep -Fq 'LSHandlerURLScheme = https' "${CONFIGURE_SCRIPT}"
