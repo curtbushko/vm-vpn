@@ -76,15 +76,20 @@ while IFS= read -r tap; do
 done < <(brew tap)
 brew cleanup --prune=all
 
+# SIGKILL Dock and cfprefsd before touching the plist so Dock cannot serialize
+# its default in-memory layout on quit and overwrite the customization.
+killall -KILL cfprefsd Dock 2>/dev/null || true
+
 dockutil --remove all --no-restart
 for app in "${dock_apps[@]}"; do
 	if [[ -d "$app" ]]; then
 		dockutil --add "$app" --no-restart
 	fi
 done
-killall Dock
-# Give macOS preference services time to persist the Dock before the image is
-# shut down, then flush the filesystem so clones inherit the customized state.
+
+# Drop cfprefsd's in-memory cache so the next reader picks up the writes, then
+# let launchd relaunch Dock against the customized plist.
+killall -KILL cfprefsd 2>/dev/null || true
 sleep 2
 sync
 
