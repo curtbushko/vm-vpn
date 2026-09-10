@@ -11,8 +11,15 @@ setup() {
 	export VM_VPN_WALLPAPER_FILE="${BATS_TEST_TMPDIR}/guest/wallpaper.png"
 	export VM_VPN_SIPS="${BATS_TEST_TMPDIR}/bin/sips"
 	export VM_VPN_OSASCRIPT="${BATS_TEST_TMPDIR}/bin/osascript"
+	export VM_VPN_PKILL="${BATS_TEST_TMPDIR}/bin/pkill"
+	export PKILL_LOG="${BATS_TEST_TMPDIR}/pkill.log"
 	export APPEARANCE_LOG="${BATS_TEST_TMPDIR}/appearance.log"
 	mkdir -p "${BATS_TEST_TMPDIR}/bin" "${VM_VPN_WORKSPACE_ROOT}/vpn" "${VM_VPN_WORKSPACE_ROOT}/bookmarks" "$(dirname "${VM_VPN_FIREFOX_POLICY_FILE}")"
+	cat >"${VM_VPN_PKILL}" <<'EOF'
+#!/usr/bin/env bash
+printf 'pkill %s\n' "$*" >>"${PKILL_LOG}"
+EOF
+	chmod 0755 "${VM_VPN_PKILL}"
 	printf '{"policies":{"DisplayBookmarksToolbar":"always"}}\n' >"${VM_VPN_FIREFOX_POLICY_FILE}"
 	cat >"${VM_VPN_AWS_VPN_CLIENT}" <<'EOF'
 #!/usr/bin/env bash
@@ -54,6 +61,44 @@ EOF
 	run "${BOOTSTRAP_SCRIPT}"
 	[ "${status}" -eq 0 ]
 	grep -Fq 'sips -s format png' "${APPEARANCE_LOG}"
+}
+
+@test "runtime bootstrap quits Firefox only when bookmarks change" {
+	printf '[{"title":"Development","url":"https://developer.mozilla.org/"}]\n' >"${VM_VPN_WORKSPACE_ROOT}/bookmarks/bookmarks.json"
+
+	run "${BOOTSTRAP_SCRIPT}"
+	[ "${status}" -eq 0 ]
+	grep -Fq 'pkill -x firefox' "${PKILL_LOG}"
+
+	: >"${PKILL_LOG}"
+	run "${BOOTSTRAP_SCRIPT}"
+	[ "${status}" -eq 0 ]
+	[ ! -s "${PKILL_LOG}" ]
+
+	printf '[{"title":"Production","url":"https://docs.aws.amazon.com/vpn/"}]\n' >"${VM_VPN_WORKSPACE_ROOT}/bookmarks/bookmarks.json"
+	run "${BOOTSTRAP_SCRIPT}"
+	[ "${status}" -eq 0 ]
+	grep -Fq 'pkill -x firefox' "${PKILL_LOG}"
+}
+
+@test "runtime bootstrap quits AWS VPN Client only when profiles change" {
+	printf '[]\n' >"${VM_VPN_WORKSPACE_ROOT}/bookmarks/bookmarks.json"
+	printf 'remote dev.example.com 443\n' >"${VM_VPN_WORKSPACE_ROOT}/vpn/development.ovpn"
+
+	run "${BOOTSTRAP_SCRIPT}"
+	[ "${status}" -eq 0 ]
+	grep -Fq 'pkill -x AWS VPN Client' "${PKILL_LOG}"
+
+	: >"${PKILL_LOG}"
+	run "${BOOTSTRAP_SCRIPT}"
+	[ "${status}" -eq 0 ]
+	run grep -Fq 'AWS VPN Client' "${PKILL_LOG}"
+	[ "${status}" -ne 0 ]
+
+	printf 'remote prod.example.com 443\n' >"${VM_VPN_WORKSPACE_ROOT}/vpn/development.ovpn"
+	run "${BOOTSTRAP_SCRIPT}"
+	[ "${status}" -eq 0 ]
+	grep -Fq 'pkill -x AWS VPN Client' "${PKILL_LOG}"
 }
 
 @test "runtime bootstrap applies bookmarks before requesting wallpaper automation" {

@@ -15,6 +15,7 @@ readonly WALLPAPER_FILE="${VM_VPN_WALLPAPER_FILE:-${STATE_ROOT}/wallpaper.png}"
 readonly WALLPAPER_SOURCE_FILE="${STATE_ROOT}/wallpaper.ppm"
 readonly SIPS="${VM_VPN_SIPS:-/usr/bin/sips}"
 readonly OSASCRIPT="${VM_VPN_OSASCRIPT:-/usr/bin/osascript}"
+readonly PKILL="${VM_VPN_PKILL:-/usr/bin/pkill}"
 
 [[ -d "$WORKSPACE_ROOT" ]] || exit 0
 
@@ -58,6 +59,7 @@ if [[ "$current_vpn_manifest" != "$desired_vpn_manifest" ]]; then
 	done
 	printf '%s\n' "$desired_vpn_manifest" >"$VPN_MANIFEST"
 	chmod 0600 "$VPN_MANIFEST"
+	"$PKILL" -x "AWS VPN Client" >/dev/null 2>&1 || true
 fi
 
 if [[ -f "$BOOKMARKS_SOURCE" ]]; then
@@ -85,6 +87,7 @@ if [[ -f "$BOOKMARKS_SOURCE" ]]; then
 		mv "$policy_temp" "$FIREFOX_POLICY_FILE"
 		printf '%s\n' "$bookmark_checksum" >"${STATE_ROOT}/bookmarks.checksum"
 		chmod 0600 "${STATE_ROOT}/bookmarks.checksum"
+		"$PKILL" -x firefox >/dev/null 2>&1 || true
 	fi
 fi
 
