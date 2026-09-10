@@ -21,6 +21,9 @@ readonly SSH_OPTIONS=(
 	-o StrictHostKeyChecking=no
 	-o UserKnownHostsFile=/dev/null
 	-o ConnectTimeout=5
+	-o PreferredAuthentications=password
+	-o PubkeyAuthentication=no
+	-o IdentitiesOnly=yes
 )
 export SSHPASS=admin
 
@@ -38,13 +41,9 @@ for attempt in {1..120}; do
 	sleep 2
 done
 
-sshpass -e /usr/bin/ssh -F /dev/null \
-	-o StrictHostKeyChecking=no \
-	-o UserKnownHostsFile=/dev/null \
+sshpass -e /usr/bin/ssh "${SSH_OPTIONS[@]}" \
 	"admin@${guest_ip}" \
 	/usr/bin/sudo /usr/sbin/networksetup -setdnsservers Ethernet 1.1.1.1 8.8.8.8
 
-sshpass -e /usr/bin/ssh -F /dev/null \
-	-o StrictHostKeyChecking=no \
-	-o UserKnownHostsFile=/dev/null \
+sshpass -e /usr/bin/ssh "${SSH_OPTIONS[@]}" \
 	"admin@${guest_ip}" /bin/bash -s <"${SCRIPT_DIR}/install-guest-agent"
