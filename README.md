@@ -90,13 +90,13 @@ Configs live outside the repository:
 ```text
 ~/.config/vm-vpn/<product>/<environment>/
 ├── appearance.json
-├── mounts.json          # optional
+├── mounts.json          # optional; rename mounts.json.example to enable
+├── mounts.json.example
 ├── vpn/
 │   ├── corporate.ovpn
 │   └── production.ovpn
-├── bookmarks/
-│   └── bookmarks.json
-└── shared/
+└── bookmarks/
+    └── bookmarks.json
 ```
 
 - Every `vpn/*.ovpn` file is imported through the AWS VPN Client CLI. Its
@@ -109,12 +109,12 @@ Configs live outside the repository:
   use blue for `dev`, amber for `staging`, red for `prod`, purple for
   `awsgov-prod`, orange for `preprod`, teal for `hybridtest`, and slate for
   other environments. Edit the generated value to override it.
-- `shared/` contains other files that the guest can read and write.
 - `mounts.json` is optional and adds extra host directories to the guest at
-  start time. Each entry needs a `tag` (used as the guest volume label; the
-  tag `workspace` is reserved) and a `source` host path; `readonly: true`
-  mounts it read-only. `~` and `~/` in `source` expand to the invoking user's
-  home directory. Example:
+  start time. `task create` writes `mounts.json.example`; rename or copy it
+  to `mounts.json` and edit the entries to enable them. Each entry needs a
+  `tag` (used as the guest volume label; the tag `workspace` is reserved)
+  and a `source` host path; `readonly: true` mounts it read-only. `~` and
+  `~/` in `source` expand to the invoking user's home directory. Example:
 
   ```json
   [
@@ -218,7 +218,8 @@ Each config mounts only its own
 - Applies the mounted `appearance.json` color as the VM wallpaper. On first use,
   click **Allow** when macOS asks whether `tart-guest-agent` may control System
   Events.
-- Makes `shared/` available through the read-write workspace mount.
+- Attaches any host directories declared in `mounts.json` as additional
+  read-write (or read-only) volumes.
 
 This prevents VPN profiles and bookmarks from accumulating across configs.
 Host-file changes take effect the next time that config starts.

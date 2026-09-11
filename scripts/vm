@@ -96,7 +96,7 @@ initialize_workspace() {
 	local config_path="$1"
 	local environment="$2"
 	umask 077
-	install -d -m 0700 "$config_path" "$config_path/vpn" "$config_path/bookmarks" "$config_path/shared"
+	install -d -m 0700 "$config_path" "$config_path/vpn" "$config_path/bookmarks"
 	write_appearance "$config_path" "$environment"
 	cat >"$config_path/bookmarks/bookmarks.json" <<'EOF'
 [
@@ -111,6 +111,20 @@ initialize_workspace() {
 ]
 EOF
 	chmod 0600 "$config_path/bookmarks/bookmarks.json"
+	cat >"$config_path/mounts.json.example" <<'EOF'
+[
+  {
+    "tag": "code",
+    "source": "~/workspace"
+  },
+  {
+    "tag": "reference",
+    "source": "/opt/reference",
+    "readonly": true
+  }
+]
+EOF
+	chmod 0600 "$config_path/mounts.json.example"
 }
 
 require_workspace() {
@@ -449,6 +463,7 @@ seed_demo() {
 	[[ "$product/$environment" == "demo/dev" ]] || fail "only demo/dev has tracked example data"
 	local config_path
 	config_path="$(require_workspace "$product" "$environment")"
+	install -d -m 0700 "$config_path/shared"
 	cp "${REPO_ROOT}/examples/demo/dev/vpn/profile.ovpn" "$config_path/vpn/profile.ovpn"
 	cp "${REPO_ROOT}/examples/demo/dev/bookmarks/bookmarks.json" "$config_path/bookmarks/bookmarks.json"
 	cp "${REPO_ROOT}/examples/demo/dev/certs/demo-ca.crt" "$config_path/shared/demo-ca.crt"

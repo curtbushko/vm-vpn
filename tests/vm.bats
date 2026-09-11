@@ -55,7 +55,11 @@ EOF
 	[ "${status}" -eq 0 ]
 	[ -d "${VM_VPN_CONFIG_HOME}/demo/dev/vpn" ]
 	[ -d "${VM_VPN_CONFIG_HOME}/demo/dev/bookmarks" ]
-	[ -d "${VM_VPN_CONFIG_HOME}/demo/dev/shared" ]
+	[ ! -e "${VM_VPN_CONFIG_HOME}/demo/dev/shared" ]
+	[ -f "${VM_VPN_CONFIG_HOME}/demo/dev/mounts.json.example" ]
+	[ ! -e "${VM_VPN_CONFIG_HOME}/demo/dev/mounts.json" ]
+	jq -e 'type == "array" and length > 0 and (.[0] | has("tag") and has("source"))' \
+		"${VM_VPN_CONFIG_HOME}/demo/dev/mounts.json.example"
 	[ "$(jq -r '.wallpaperColor' "${VM_VPN_CONFIG_HOME}/demo/dev/appearance.json")" = "#7895A8" ]
 	[ "$(jq -r 'length' "${VM_VPN_CONFIG_HOME}/demo/dev/bookmarks/bookmarks.json")" -eq 2 ]
 	[ "$(jq -r '.[0].title' "${VM_VPN_CONFIG_HOME}/demo/dev/bookmarks/bookmarks.json")" = "Company documentation" ]
