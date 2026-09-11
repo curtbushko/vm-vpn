@@ -132,6 +132,8 @@ setup() {
 	grep -Fq '/Applications/Firefox.app/Contents/Resources/distribution' "${CONFIGURE_SCRIPT}"
 	grep -Fq 'sudo chown "$(id -u):$(id -g)" "$FIREFOX_POLICY_DIR"' "${CONFIGURE_SCRIPT}"
 	grep -Fq 'Catppuccin Mocha' "${CONFIGURE_SCRIPT}"
+	grep -Fq 'auto-update = off' "${CONFIGURE_SCRIPT}"
+	grep -Fq 'desktop-notifications = false' "${CONFIGURE_SCRIPT}"
 	run grep -F 'vim.opt.background' "${CONFIGURE_SCRIPT}"
 	[ "${status}" -ne 0 ]
 	grep -Fq 'DisplayBookmarksToolbar' "${CONFIGURE_SCRIPT}"
@@ -153,6 +155,9 @@ setup() {
 	grep -Fq '"DisableProfileImport": true' "${CONFIGURE_SCRIPT}"
 	grep -Fq '"DontCheckDefaultBrowser": true' "${CONFIGURE_SCRIPT}"
 	grep -Fq '"SkipTermsOfUse": true' "${CONFIGURE_SCRIPT}"
+	grep -Fq '"DisableFirefoxAccounts": true' "${CONFIGURE_SCRIPT}"
+	grep -Fq '"sidebar.revamp":' "${CONFIGURE_SCRIPT}"
+	grep -Fq '"sidebar.verticalTabs":' "${CONFIGURE_SCRIPT}"
 	grep -Fq '"SkipOnboarding": true' "${CONFIGURE_SCRIPT}"
 	grep -Fq '"security.webauthn.enable_macos_passkeys":' "${CONFIGURE_SCRIPT}"
 	grep -Fq '"security.webauth.webauthn_enable_softtoken":' "${CONFIGURE_SCRIPT}"

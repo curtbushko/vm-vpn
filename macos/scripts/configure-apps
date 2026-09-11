@@ -21,6 +21,8 @@ font-size = 14
 window-padding-x = 12
 window-padding-y = 10
 macos-option-as-alt = true
+auto-update = off
+desktop-notifications = false
 EOF
 
 sudo install -d -m 0755 "$FIREFOX_POLICY_DIR"
@@ -41,6 +43,7 @@ sudo tee "${FIREFOX_POLICY_FILE}" >/dev/null <<'EOF'
     "DisableProfileImport": true,
     "DontCheckDefaultBrowser": true,
     "SkipTermsOfUse": true,
+    "DisableFirefoxAccounts": true,
     "UserMessaging": {
       "SkipOnboarding": true,
       "ExtensionRecommendations": false,
@@ -69,6 +72,8 @@ sudo tee "${FIREFOX_POLICY_FILE}" >/dev/null <<'EOF'
       "browser.toolbars.bookmarks.visibility": "always",
       "intl.accept_languages": "en-US, en",
       "intl.locale.requested": "en-US",
+      "sidebar.revamp": { "Value": false, "Status": "locked" },
+      "sidebar.verticalTabs": { "Value": false, "Status": "locked" },
       "security.webauthn.enable_macos_passkeys": { "Value": true, "Status": "locked" },
       "security.webauth.webauthn_enable_softtoken": { "Value": true, "Status": "locked" },
       "ui.systemUsesDarkTheme": 1
