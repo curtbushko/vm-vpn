@@ -76,8 +76,6 @@ sudo tee "${FIREFOX_POLICY_FILE}" >/dev/null <<'EOF'
       "intl.locale.requested": "en-US",
       "sidebar.revamp": { "Value": false, "Status": "locked" },
       "sidebar.verticalTabs": { "Value": false, "Status": "locked" },
-      "security.webauthn.enable_macos_passkeys": { "Value": false, "Status": "locked" },
-      "security.webauth.webauthn_enable_softtoken": { "Value": true, "Status": "locked" },
       "ui.systemUsesDarkTheme": 1
     }
   }
@@ -89,6 +87,26 @@ sudo chmod 0644 "${FIREFOX_POLICY_FILE}"
 # Ensure a Firefox profile exists before runtime configuration is mounted so
 # managed policies are available on the first interactive launch.
 /Applications/Firefox.app/Contents/MacOS/firefox -CreateProfile vm-vpn >/dev/null
+
+# Mozilla's enterprise-policy pref block-list silently drops security.webauth*
+# and security.webauthn* prefs, so apply them via Firefox's autoconfig
+# mechanism (Contents/Resources/defaults/pref/autoconfig.js chains to
+# Contents/Resources/vm-vpn.cfg) so Bitwarden's software token handles
+# WebAuthn for every profile, regardless of which one Firefox launches.
+readonly FIREFOX_RESOURCES="/Applications/Firefox.app/Contents/Resources"
+sudo tee "${FIREFOX_RESOURCES}/defaults/pref/autoconfig.js" >/dev/null <<'EOF'
+pref("general.config.filename", "vm-vpn.cfg");
+pref("general.config.obscure_value", 0);
+pref("general.config.sandbox_enabled", false);
+EOF
+sudo tee "${FIREFOX_RESOURCES}/vm-vpn.cfg" >/dev/null <<'EOF'
+// The first line is ignored by Firefox's autoconfig loader.
+lockPref("security.webauth.webauthn_enable_softtoken", true);
+lockPref("security.webauthn.enable_macos_passkeys", false);
+EOF
+sudo chmod 0644 \
+	"${FIREFOX_RESOURCES}/defaults/pref/autoconfig.js" \
+	"${FIREFOX_RESOURCES}/vm-vpn.cfg"
 defaults write com.apple.LaunchServices/com.apple.launchservices.secure LSHandlers -array \
 	'{ LSHandlerURLScheme = http; LSHandlerRoleAll = org.mozilla.firefox; }' \
 	'{ LSHandlerURLScheme = https; LSHandlerRoleAll = org.mozilla.firefox; }' \
