@@ -278,3 +278,82 @@ EOF
 @test "doctor includes Task in its development-shell checks" {
 	grep -Fq 'bats direnv jq nix packer shellcheck shfmt sshpass tart task' "${VM_SCRIPT}"
 }
+
+@test "start passes additional --dir mounts declared in mounts.json" {
+	"${VM_SCRIPT}" create demo dev
+	mkdir -p "${BATS_TEST_TMPDIR}/host/workspace" "${BATS_TEST_TMPDIR}/host/reference"
+	cat >"${VM_VPN_CONFIG_HOME}/demo/dev/mounts.json" <<EOF
+[
+  { "tag": "code", "source": "${BATS_TEST_TMPDIR}/host/workspace" },
+  { "tag": "reference", "source": "${BATS_TEST_TMPDIR}/host/reference", "readonly": true }
+]
+EOF
+
+	run "${VM_SCRIPT}" start demo dev
+	[ "${status}" -eq 0 ]
+	[[ "${output}" == *"mounts: valid"* ]]
+
+	grep -Fq -- "--dir code:${BATS_TEST_TMPDIR}/host/workspace" "${TART_LOG}"
+	grep -Fq -- "--dir reference:${BATS_TEST_TMPDIR}/host/reference:ro" "${TART_LOG}"
+}
+
+@test "start expands ~ in mounts.json source paths" {
+	"${VM_SCRIPT}" create demo dev
+	export HOME="${BATS_TEST_TMPDIR}/home"
+	mkdir -p "${HOME}/workspace"
+	cat >"${VM_VPN_CONFIG_HOME}/demo/dev/mounts.json" <<'EOF'
+[ { "tag": "code", "source": "~/workspace" } ]
+EOF
+
+	run "${VM_SCRIPT}" start demo dev
+	[ "${status}" -eq 0 ]
+	grep -Fq -- "--dir code:${HOME}/workspace" "${TART_LOG}"
+}
+
+@test "start rejects invalid mounts.json" {
+	"${VM_SCRIPT}" create demo dev
+	printf '{ "not": "an array" }\n' >"${VM_VPN_CONFIG_HOME}/demo/dev/mounts.json"
+
+	run "${VM_SCRIPT}" start demo dev
+	[ "${status}" -ne 0 ]
+	[[ "${output}" == *"mounts is invalid"* ]]
+}
+
+@test "start rejects mounts.json entries that reuse the workspace tag" {
+	"${VM_SCRIPT}" create demo dev
+	mkdir -p "${BATS_TEST_TMPDIR}/host/workspace"
+	cat >"${VM_VPN_CONFIG_HOME}/demo/dev/mounts.json" <<EOF
+[ { "tag": "workspace", "source": "${BATS_TEST_TMPDIR}/host/workspace" } ]
+EOF
+
+	run "${VM_SCRIPT}" start demo dev
+	[ "${status}" -ne 0 ]
+	[[ "${output}" == *"mounts is invalid"* ]]
+}
+
+@test "start fails when a mounts.json source directory does not exist" {
+	"${VM_SCRIPT}" create demo dev
+	cat >"${VM_VPN_CONFIG_HOME}/demo/dev/mounts.json" <<EOF
+[ { "tag": "code", "source": "${BATS_TEST_TMPDIR}/does-not-exist" } ]
+EOF
+
+	run "${VM_SCRIPT}" start demo dev
+	[ "${status}" -ne 0 ]
+	[[ "${output}" == *"mount source is missing"* ]]
+}
+
+@test "validate reports mounts state alongside bookmarks and vpn" {
+	"${VM_SCRIPT}" create demo dev
+
+	run "${VM_SCRIPT}" validate demo dev
+	[ "${status}" -eq 0 ]
+	[[ "${output}" == *"mounts: none"* ]]
+
+	mkdir -p "${BATS_TEST_TMPDIR}/host/workspace"
+	cat >"${VM_VPN_CONFIG_HOME}/demo/dev/mounts.json" <<EOF
+[ { "tag": "code", "source": "${BATS_TEST_TMPDIR}/host/workspace" } ]
+EOF
+	run "${VM_SCRIPT}" validate demo dev
+	[ "${status}" -eq 0 ]
+	[[ "${output}" == *"mounts: valid"* ]]
+}

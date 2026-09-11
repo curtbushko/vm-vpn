@@ -148,6 +148,75 @@ appearance_state() {
 	fi
 }
 
+mounts_state() {
+	local config_path="$1"
+	local mounts_file="${config_path}/mounts.json"
+	if [[ ! -f "$mounts_file" ]]; then
+		printf 'none\n'
+		return 0
+	fi
+	if ! jq -e '
+	    type == "array"
+	    and all(.[];
+	      (.tag | type == "string")
+	      and (.tag | test("^[a-z0-9]+(-[a-z0-9]+)*$"))
+	      and (.tag != "workspace")
+	      and (.source | type == "string")
+	      and (.source | length > 0)
+	      and ((.readonly // false) | type == "boolean")
+	    )
+	    and ((map(.tag) | unique | length) == length)
+	  ' "$mounts_file" >/dev/null 2>&1; then
+		printf 'invalid\n'
+		return 0
+	fi
+	printf 'valid\n'
+}
+
+expand_mount_source() {
+	local raw="$1"
+	local tilde='~'
+	if [[ "$raw" == "$tilde" ]]; then
+		printf '%s\n' "$HOME"
+	elif [[ "${raw:0:2}" == "${tilde}/" ]]; then
+		printf '%s/%s\n' "$HOME" "${raw:2}"
+	else
+		printf '%s\n' "$raw"
+	fi
+}
+
+check_mount_sources() {
+	local config_path="$1"
+	local mounts_file="${config_path}/mounts.json"
+	[[ -f "$mounts_file" ]] || return 0
+	local count index source_raw source
+	count="$(jq 'length' "$mounts_file")"
+	for ((index = 0; index < count; index++)); do
+		source_raw="$(jq -r ".[$index].source" "$mounts_file")"
+		source="$(expand_mount_source "$source_raw")"
+		[[ -d "$source" ]] || fail "mount source is missing: $source_raw"
+	done
+}
+
+mount_flags() {
+	local config_path="$1"
+	local mounts_file="${config_path}/mounts.json"
+	[[ -f "$mounts_file" ]] || return 0
+	local count index tag source_raw source read_only
+	count="$(jq 'length' "$mounts_file")"
+	for ((index = 0; index < count; index++)); do
+		tag="$(jq -r ".[$index].tag" "$mounts_file")"
+		source_raw="$(jq -r ".[$index].source" "$mounts_file")"
+		read_only="$(jq -r ".[$index].readonly // false" "$mounts_file")"
+		source="$(expand_mount_source "$source_raw")"
+		if [[ "$read_only" == "true" ]]; then
+			printf -- '--dir\n%s:%s:ro\n' "$tag" "$source"
+		else
+			printf -- '--dir\n%s:%s\n' "$tag" "$source"
+		fi
+	done
+}
+
 vpn_state() {
 	local config_path="$1"
 	local vpn_profile
@@ -201,7 +270,7 @@ create_config() {
 start_config() {
 	local product="$1"
 	local environment="$2"
-	local config_path vm_name bookmark_status appearance_status vpn_count
+	local config_path vm_name bookmark_status appearance_status vpn_count mounts_status
 	config_path="$(require_workspace "$product" "$environment")"
 	migrate_appearance "$config_path" "$environment"
 	if [[ "$(appearance_state "$config_path")" == "missing" ]]; then
@@ -211,9 +280,19 @@ start_config() {
 	[[ "$appearance_status" == "valid" ]] || fail "appearance is $appearance_status; fix: $config_path/appearance.json"
 	bookmark_status="$(bookmarks_state "$config_path")"
 	[[ "$bookmark_status" == "valid" ]] || fail "bookmarks are $bookmark_status; run: task validate -- $product $environment"
+	mounts_status="$(mounts_state "$config_path")"
+	[[ "$mounts_status" == "invalid" ]] && fail "mounts is invalid; fix: $config_path/mounts.json"
 	vpn_count="$(vpn_profile_count "$config_path")"
-	printf 'config: %s/%s\nappearance: %s\nbookmarks: %s\nvpn profiles: %s\n' \
-		"$product" "$environment" "$appearance_status" "$bookmark_status" "$vpn_count"
+	printf 'config: %s/%s\nappearance: %s\nbookmarks: %s\nmounts: %s\nvpn profiles: %s\n' \
+		"$product" "$environment" "$appearance_status" "$bookmark_status" "$mounts_status" "$vpn_count"
+	local -a extra_mount_flags=()
+	if [[ "$mounts_status" == "valid" ]]; then
+		check_mount_sources "$config_path"
+		local mount_line
+		while IFS= read -r mount_line; do
+			extra_mount_flags+=("$mount_line")
+		done < <(mount_flags "$config_path")
+	fi
 	vm_name="$(instance_name "$product" "$environment")"
 	require_command tart
 	require_base_image
@@ -224,7 +303,7 @@ start_config() {
 		printf 'runtime: reusing existing runtime\n'
 	fi
 	printf 'runtime: starting\nbootstrap logs: task logs -- %s %s\n' "$product" "$environment"
-	exec tart run "$vm_name" --dir "workspace:$config_path"
+	exec tart run "$vm_name" --dir "workspace:$config_path" "${extra_mount_flags[@]}"
 }
 
 stop_config() {
@@ -265,13 +344,14 @@ delete_config() {
 validate_config() {
 	local product="$1"
 	local environment="$2"
-	local config_path bookmark_status vpn_status
+	local config_path bookmark_status vpn_status mounts_status
 	config_path="$(require_workspace "$product" "$environment")"
 	bookmark_status="$(bookmarks_state "$config_path")"
 	vpn_status="$(vpn_state "$config_path")"
-	printf 'config: %s/%s\nbookmarks: %s\nvpn: %s\npath: %s\n' \
-		"$product" "$environment" "$bookmark_status" "$vpn_status" "$config_path"
-	[[ "$bookmark_status" == "valid" ]]
+	mounts_status="$(mounts_state "$config_path")"
+	printf 'config: %s/%s\nbookmarks: %s\nvpn: %s\nmounts: %s\npath: %s\n' \
+		"$product" "$environment" "$bookmark_status" "$vpn_status" "$mounts_status" "$config_path"
+	[[ "$bookmark_status" == "valid" ]] && [[ "$mounts_status" != "invalid" ]]
 }
 
 status_config() {

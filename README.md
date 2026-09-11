@@ -90,6 +90,7 @@ Configs live outside the repository:
 ```text
 ~/.config/vm-vpn/<product>/<environment>/
 ├── appearance.json
+├── mounts.json          # optional
 ├── vpn/
 │   ├── corporate.ovpn
 │   └── production.ovpn
@@ -109,6 +110,18 @@ Configs live outside the repository:
   `awsgov-prod`, orange for `preprod`, teal for `hybridtest`, and slate for
   other environments. Edit the generated value to override it.
 - `shared/` contains other files that the guest can read and write.
+- `mounts.json` is optional and adds extra host directories to the guest at
+  start time. Each entry needs a `tag` (used as the guest volume label; the
+  tag `workspace` is reserved) and a `source` host path; `readonly: true`
+  mounts it read-only. `~` and `~/` in `source` expand to the invoking user's
+  home directory. Example:
+
+  ```json
+  [
+    { "tag": "code", "source": "~/workspace" },
+    { "tag": "reference", "source": "/opt/reference", "readonly": true }
+  ]
+  ```
 
 Bookmark entries use this format:
 
