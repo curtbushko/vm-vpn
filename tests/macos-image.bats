@@ -156,6 +156,8 @@ setup() {
 	grep -Fq '"DontCheckDefaultBrowser": true' "${CONFIGURE_SCRIPT}"
 	grep -Fq '"SkipTermsOfUse": true' "${CONFIGURE_SCRIPT}"
 	grep -Fq '"DisableFirefoxAccounts": true' "${CONFIGURE_SCRIPT}"
+	grep -Fq '"PasswordManagerEnabled": false' "${CONFIGURE_SCRIPT}"
+	grep -Fq '"OfferToSaveLogins": false' "${CONFIGURE_SCRIPT}"
 	grep -Fq '"sidebar.revamp":' "${CONFIGURE_SCRIPT}"
 	grep -Fq '"sidebar.verticalTabs":' "${CONFIGURE_SCRIPT}"
 	grep -Fq '"SkipOnboarding": true' "${CONFIGURE_SCRIPT}"

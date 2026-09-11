@@ -44,6 +44,8 @@ sudo tee "${FIREFOX_POLICY_FILE}" >/dev/null <<'EOF'
     "DontCheckDefaultBrowser": true,
     "SkipTermsOfUse": true,
     "DisableFirefoxAccounts": true,
+    "PasswordManagerEnabled": false,
+    "OfferToSaveLogins": false,
     "UserMessaging": {
       "SkipOnboarding": true,
       "ExtensionRecommendations": false,
