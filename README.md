@@ -204,6 +204,12 @@ The three configs run concurrently in separate VMs. On first start, the command
 creates that config's hidden runtime from the shared image. Later starts reuse
 it so macOS and application state persist.
 
+`task start` returns as soon as the VM is reachable, leaving the runtime
+process detached in the background. Tart output is tailed live while booting
+and captured to `${XDG_STATE_HOME:-~/.local/state}/vm-vpn/<vm>.log` for
+inspection. If tart exits before the VM comes up, the command fails
+immediately and points at `task logs`.
+
 Each config mounts only its own
 `~/.config/vm-vpn/<product>/<environment>` directory read-only at
 `/Volumes/My Shared Files/workspace`. At guest login, the runtime bootstrap:

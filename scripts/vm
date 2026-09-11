@@ -10,6 +10,9 @@ readonly REPO_ROOT
 readonly CONFIG_ROOT="${VM_VPN_CONFIG_HOME:-${XDG_CONFIG_HOME:-${HOME}/.config}/vm-vpn}"
 readonly BUILD_SCRIPT="${VM_VPN_BUILD_SCRIPT:-${REPO_ROOT}/macos/scripts/build-image}"
 readonly BASE_MARKER="${VM_VPN_BASE_MARKER:-${CONFIG_ROOT}/.base-image-ready}"
+readonly RUNTIME_LOG_ROOT="${VM_VPN_RUNTIME_LOG_ROOT:-${XDG_STATE_HOME:-${HOME}/.local/state}/vm-vpn}"
+readonly RUNTIME_READY_TIMEOUT="${VM_VPN_READY_TIMEOUT:-90}"
+readonly RUNTIME_READY_POLL_INTERVAL="${VM_VPN_READY_POLL_INTERVAL:-1}"
 
 fail() {
 	printf 'vm: %s\n' "$*" >&2
@@ -334,7 +337,56 @@ start_config() {
 		printf 'runtime: reusing existing runtime\n'
 	fi
 	printf 'runtime: starting\nbootstrap logs: task logs -- %s %s\n' "$product" "$environment"
-	exec tart run "$vm_name" --dir "workspace:$config_path" "${extra_mount_flags[@]}"
+	install -d -m 0700 "$RUNTIME_LOG_ROOT"
+	local runtime_log="$RUNTIME_LOG_ROOT/${vm_name}.log"
+	: >"$runtime_log"
+	nohup tart run "$vm_name" --dir "workspace:$config_path" "${extra_mount_flags[@]}" \
+		>"$runtime_log" 2>&1 &
+	local tart_pid=$!
+	disown "$tart_pid" 2>/dev/null || true
+	wait_for_runtime "$tart_pid" "$vm_name" "$runtime_log" "$product" "$environment"
+}
+
+wait_for_runtime() {
+	local tart_pid="$1"
+	local vm_name="$2"
+	local runtime_log="$3"
+	local product="$4"
+	local environment="$5"
+	tail -n +1 -f "$runtime_log" &
+	local tail_pid=$!
+	local elapsed_ms=0 interval_ms timeout_ms ip
+	interval_ms="$(scale_ms "$RUNTIME_READY_POLL_INTERVAL")"
+	timeout_ms="$(scale_ms "$RUNTIME_READY_TIMEOUT")"
+	while ((elapsed_ms < timeout_ms)); do
+		if ip="$(tart ip "$vm_name" 2>/dev/null)" && [[ -n "$ip" ]]; then
+			stop_tail "$tail_pid"
+			printf 'runtime: reachable at %s\n' "$ip"
+			return 0
+		fi
+		if ! kill -0 "$tart_pid" 2>/dev/null; then
+			stop_tail "$tail_pid"
+			printf 'runtime: tart exited before the VM came up; see task logs -- %s %s\n' \
+				"$product" "$environment" >&2
+			return 1
+		fi
+		sleep "$RUNTIME_READY_POLL_INTERVAL"
+		((elapsed_ms += interval_ms))
+	done
+	stop_tail "$tail_pid"
+	printf 'runtime: timed out waiting for the VM to become reachable; see task logs -- %s %s\n' \
+		"$product" "$environment" >&2
+	return 1
+}
+
+stop_tail() {
+	local tail_pid="$1"
+	kill "$tail_pid" 2>/dev/null || true
+	wait "$tail_pid" 2>/dev/null || true
+}
+
+scale_ms() {
+	awk -v value="$1" 'BEGIN { printf "%d\n", value * 1000 }'
 }
 
 stop_config() {

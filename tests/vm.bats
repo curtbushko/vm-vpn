@@ -13,6 +13,9 @@ setup() {
 	mkdir -p "${BATS_TEST_TMPDIR}/bin"
 	: >"${TART_INSTANCES}"
 	printf 'verified:12\n' >"${VM_VPN_BASE_MARKER}"
+	export VM_VPN_RUNTIME_LOG_ROOT="${BATS_TEST_TMPDIR}/runtime-log"
+	export VM_VPN_READY_POLL_INTERVAL="0.1"
+	export VM_VPN_READY_TIMEOUT="5"
 
 	cat >"${BATS_TEST_TMPDIR}/bin/tart" <<'EOF'
 #!/usr/bin/env bash
@@ -37,6 +40,19 @@ delete)
 list)
 	printf 'Source Name State\nlocal vm-vpn-base stopped\n'
 	awk '{ printf "local %s stopped\n", $0 }' "${TART_INSTANCES}"
+	;;
+run)
+	if [[ "${TART_RUN_FAILS:-0}" == "1" ]]; then
+		printf 'tart: fatal error\n' >&2
+		exit 1
+	fi
+	printf 'tart: booting %s\n' "${2:-}"
+	;;
+ip)
+	if [[ "${TART_IP_MISSING:-0}" == "1" ]]; then
+		exit 1
+	fi
+	printf '192.168.64.7\n'
 	;;
 esac
 EOF
@@ -124,11 +140,31 @@ EOF
 	run "${VM_SCRIPT}" start demo dev
 	[ "${status}" -eq 0 ]
 	[[ "${output}" == *"runtime: reusing existing runtime"* ]]
+	[[ "${output}" == *"runtime: reachable at 192.168.64.7"* ]]
 
 	[ "$(grep -Fc 'clone vm-vpn-base vm-vpn-demo-dev' "${TART_LOG}")" -eq 1 ]
 	[ "$(grep -Fc "run vm-vpn-demo-dev --dir workspace:${VM_VPN_CONFIG_HOME}/demo/dev" "${TART_LOG}")" -eq 2 ]
 	run grep -F ":ro" "${TART_LOG}"
 	[ "${status}" -ne 0 ]
+}
+
+@test "start captures tart output to a runtime log for live tailing" {
+	"${VM_SCRIPT}" create demo dev
+
+	run "${VM_SCRIPT}" start demo dev
+	[ "${status}" -eq 0 ]
+	[ -f "${VM_VPN_RUNTIME_LOG_ROOT}/vm-vpn-demo-dev.log" ]
+	grep -Fq "tart: booting vm-vpn-demo-dev" "${VM_VPN_RUNTIME_LOG_ROOT}/vm-vpn-demo-dev.log"
+}
+
+@test "start fails immediately when tart exits before the VM boots" {
+	"${VM_SCRIPT}" create demo dev
+	export TART_RUN_FAILS=1
+	export TART_IP_MISSING=1
+
+	run "${VM_SCRIPT}" start demo dev
+	[ "${status}" -ne 0 ]
+	[[ "${output}" == *"tart exited before the VM came up"* ]]
 }
 
 @test "start migrates missing appearance and rejects invalid colors" {
