@@ -104,9 +104,10 @@ Configs live outside the repository:
 - `bookmarks.json` defines its Firefox bookmark toolbar entries and starts
   with two placeholder entries to edit or replace.
 - `appearance.json` sets `wallpaperColor` to a six-digit hex color. New configs
-  use blue for `dev`, amber for `staging`, red for `prod`, purple for
-  `awsgov-prod`, orange for `preprod`, teal for `hybridtest`, and slate for
-  other environments. Edit the generated value to override it.
+  use cooler colors for the standard tiers — blue for `dev`, green for
+  `staging`, purple for `prod` — and warmer colors for the specialty tiers —
+  yellow for `hybridtest`, orange for `preprod`, red for `awsgov-prod`. Other
+  environments default to slate. Edit the generated value to override it.
 - `mounts.json` adds extra host directories to the guest at start time.
   `task create` writes it with example entries commented out with `//`; edit
   the file to uncomment or add entries. Each entry needs a `tag` (used as

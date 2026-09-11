@@ -52,24 +52,24 @@ instance_name() {
 
 appearance_color() {
 	case "$1" in
-	dev) printf '#7895A8\n' ;;
-	staging) printf '#5F7F95\n' ;;
-	prod) printf '#465F70\n' ;;
-	hybridtest) printf '#B77A7A\n' ;;
-	preprod) printf '#965E5E\n' ;;
-	awsgov-prod) printf '#744747\n' ;;
+	dev) printf '#3B6FB8\n' ;;
+	staging) printf '#2F8F6A\n' ;;
+	prod) printf '#5B4A9C\n' ;;
+	hybridtest) printf '#C9A227\n' ;;
+	preprod) printf '#C4691E\n' ;;
+	awsgov-prod) printf '#A03535\n' ;;
 	*) printf '#374151\n' ;;
 	esac
 }
 
 is_legacy_appearance_color() {
 	case "$1:$2" in
-	dev:#2563EB | dev:#0EA5E9 | \
-		staging:#D97706 | staging:#2563EB | \
-		prod:#B91C1C | prod:#1E3A8A | \
-		hybridtest:#0F766E | hybridtest:#FB7185 | \
-		preprod:#C2410C | preprod:#DC2626 | \
-		awsgov-prod:#6D28D9 | awsgov-prod:#7F1D1D) return 0 ;;
+	dev:#2563EB | dev:#0EA5E9 | dev:#7895A8 | \
+		staging:#D97706 | staging:#2563EB | staging:#5F7F95 | \
+		prod:#B91C1C | prod:#1E3A8A | prod:#465F70 | \
+		hybridtest:#0F766E | hybridtest:#FB7185 | hybridtest:#B77A7A | \
+		preprod:#C2410C | preprod:#DC2626 | preprod:#965E5E | \
+		awsgov-prod:#6D28D9 | awsgov-prod:#7F1D1D | awsgov-prod:#744747) return 0 ;;
 	*) return 1 ;;
 	esac
 }

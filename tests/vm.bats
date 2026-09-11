@@ -79,7 +79,7 @@ EOF
 	grep -Fq '// {' "${VM_VPN_CONFIG_HOME}/demo/dev/mounts.json"
 	grep -Fq '"tag": "code"' "${VM_VPN_CONFIG_HOME}/demo/dev/mounts.json"
 	grep -Fq '"source": "~/workspace"' "${VM_VPN_CONFIG_HOME}/demo/dev/mounts.json"
-	[ "$(jq -r '.wallpaperColor' "${VM_VPN_CONFIG_HOME}/demo/dev/appearance.json")" = "#7895A8" ]
+	[ "$(jq -r '.wallpaperColor' "${VM_VPN_CONFIG_HOME}/demo/dev/appearance.json")" = "#3B6FB8" ]
 	[ "$(jq -r 'length' "${VM_VPN_CONFIG_HOME}/demo/dev/bookmarks.json")" -eq 2 ]
 	[ "$(jq -r '.[0].title' "${VM_VPN_CONFIG_HOME}/demo/dev/bookmarks.json")" = "Company documentation" ]
 	[ "$(jq -r '.[0].url' "${VM_VPN_CONFIG_HOME}/demo/dev/bookmarks.json")" = "https://docs.example.com/" ]
@@ -98,12 +98,12 @@ EOF
 		"${VM_SCRIPT}" create demo "$environment"
 		[ "$(jq -r '.wallpaperColor' "${VM_VPN_CONFIG_HOME}/demo/${environment}/appearance.json")" = "$expected_color" ]
 	done <<'EOF'
-dev #7895A8
-staging #5F7F95
-prod #465F70
-hybridtest #B77A7A
-preprod #965E5E
-awsgov-prod #744747
+dev #3B6FB8
+staging #2F8F6A
+prod #5B4A9C
+hybridtest #C9A227
+preprod #C4691E
+awsgov-prod #A03535
 qa #374151
 EOF
 }
@@ -114,12 +114,12 @@ EOF
 
 	run "${VM_SCRIPT}" start demo staging
 	[ "${status}" -eq 0 ]
-	[ "$(jq -r '.wallpaperColor' "${VM_VPN_CONFIG_HOME}/demo/staging/appearance.json")" = "#5F7F95" ]
+	[ "$(jq -r '.wallpaperColor' "${VM_VPN_CONFIG_HOME}/demo/staging/appearance.json")" = "#2F8F6A" ]
 
 	printf '{"wallpaperColor":"#2563EB"}\n' >"${VM_VPN_CONFIG_HOME}/demo/staging/appearance.json"
 	run "${VM_SCRIPT}" start demo staging
 	[ "${status}" -eq 0 ]
-	[ "$(jq -r '.wallpaperColor' "${VM_VPN_CONFIG_HOME}/demo/staging/appearance.json")" = "#5F7F95" ]
+	[ "$(jq -r '.wallpaperColor' "${VM_VPN_CONFIG_HOME}/demo/staging/appearance.json")" = "#2F8F6A" ]
 
 	printf '{"wallpaperColor":"#ABCDEF"}\n' >"${VM_VPN_CONFIG_HOME}/demo/staging/appearance.json"
 	run "${VM_SCRIPT}" start demo staging
@@ -173,7 +173,7 @@ EOF
 
 	run "${VM_SCRIPT}" start demo staging
 	[ "${status}" -eq 0 ]
-	[ "$(jq -r '.wallpaperColor' "${VM_VPN_CONFIG_HOME}/demo/staging/appearance.json")" = "#5F7F95" ]
+	[ "$(jq -r '.wallpaperColor' "${VM_VPN_CONFIG_HOME}/demo/staging/appearance.json")" = "#2F8F6A" ]
 	[[ "${output}" == *"appearance: valid"* ]]
 
 	printf '{"wallpaperColor":"orange"}\n' >"${VM_VPN_CONFIG_HOME}/demo/staging/appearance.json"
