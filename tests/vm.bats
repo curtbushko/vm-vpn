@@ -365,6 +365,51 @@ EOF
 	grep -Fq -- "--dir code:${HOME}/workspace" "${TART_LOG}"
 }
 
+@test "start records the vm name for the guest bootstrap" {
+	"${VM_SCRIPT}" create demo staging
+
+	run "${VM_SCRIPT}" start demo staging
+	[ "${status}" -eq 0 ]
+	[ -f "${VM_VPN_CONFIG_HOME}/demo/staging/.vm-name" ]
+	[ "$(<"${VM_VPN_CONFIG_HOME}/demo/staging/.vm-name")" = "vm-vpn-demo-staging" ]
+}
+
+@test "start accepts mounts.json entries with a link target" {
+	"${VM_SCRIPT}" create demo dev
+	mkdir -p "${BATS_TEST_TMPDIR}/host/workspace"
+	cat >"${VM_VPN_CONFIG_HOME}/demo/dev/mounts.json" <<EOF
+[ { "tag": "code", "source": "${BATS_TEST_TMPDIR}/host/workspace", "link": "~/code" } ]
+EOF
+
+	run "${VM_SCRIPT}" start demo dev
+	[ "${status}" -eq 0 ]
+	[[ "${output}" == *"mounts: valid"* ]]
+}
+
+@test "start rejects mounts.json entries with an empty link" {
+	"${VM_SCRIPT}" create demo dev
+	mkdir -p "${BATS_TEST_TMPDIR}/host/workspace"
+	cat >"${VM_VPN_CONFIG_HOME}/demo/dev/mounts.json" <<EOF
+[ { "tag": "code", "source": "${BATS_TEST_TMPDIR}/host/workspace", "link": "" } ]
+EOF
+
+	run "${VM_SCRIPT}" start demo dev
+	[ "${status}" -ne 0 ]
+	[[ "${output}" == *"mounts is invalid"* ]]
+}
+
+@test "start rejects mounts.json entries with a relative link" {
+	"${VM_SCRIPT}" create demo dev
+	mkdir -p "${BATS_TEST_TMPDIR}/host/workspace"
+	cat >"${VM_VPN_CONFIG_HOME}/demo/dev/mounts.json" <<EOF
+[ { "tag": "code", "source": "${BATS_TEST_TMPDIR}/host/workspace", "link": "code" } ]
+EOF
+
+	run "${VM_SCRIPT}" start demo dev
+	[ "${status}" -ne 0 ]
+	[[ "${output}" == *"mounts is invalid"* ]]
+}
+
 @test "start rejects invalid mounts.json" {
 	"${VM_SCRIPT}" create demo dev
 	printf '{ "not": "an array" }\n' >"${VM_VPN_CONFIG_HOME}/demo/dev/mounts.json"

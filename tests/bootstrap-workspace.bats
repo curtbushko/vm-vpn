@@ -11,7 +11,13 @@ setup() {
 	export VM_VPN_WALLPAPER_FILE="${BATS_TEST_TMPDIR}/guest/wallpaper.png"
 	export VM_VPN_SIPS="${BATS_TEST_TMPDIR}/bin/sips"
 	export VM_VPN_OSASCRIPT="${BATS_TEST_TMPDIR}/bin/osascript"
+	export VM_VPN_SHARED_ROOT="${BATS_TEST_TMPDIR}/shared"
+	export HOME="${BATS_TEST_TMPDIR}/home"
+	mkdir -p "${HOME}" "${VM_VPN_SHARED_ROOT}"
 	export VM_VPN_PKILL="${BATS_TEST_TMPDIR}/bin/pkill"
+	export VM_VPN_SUDO="${BATS_TEST_TMPDIR}/bin/sudo"
+	export VM_VPN_SCUTIL="${BATS_TEST_TMPDIR}/bin/scutil"
+	export SCUTIL_LOG="${BATS_TEST_TMPDIR}/scutil.log"
 	export PKILL_LOG="${BATS_TEST_TMPDIR}/pkill.log"
 	export APPEARANCE_LOG="${BATS_TEST_TMPDIR}/appearance.log"
 	mkdir -p "${BATS_TEST_TMPDIR}/bin" "${VM_VPN_WORKSPACE_ROOT}/vpn" "$(dirname "${VM_VPN_FIREFOX_POLICY_FILE}")"
@@ -40,6 +46,18 @@ set -euo pipefail
 printf 'osascript %s\n' "$*" >>"${APPEARANCE_LOG}"
 EOF
 	chmod 0755 "${VM_VPN_SIPS}" "${VM_VPN_OSASCRIPT}"
+	cat >"${VM_VPN_SCUTIL}" <<'EOF'
+#!/usr/bin/env bash
+printf 'scutil %s\n' "$*" >>"${SCUTIL_LOG}"
+EOF
+	cat >"${VM_VPN_SUDO}" <<'EOF'
+#!/usr/bin/env bash
+if [[ "${1:-}" == "-n" ]]; then
+  shift
+fi
+exec "$@"
+EOF
+	chmod 0755 "${VM_VPN_SCUTIL}" "${VM_VPN_SUDO}"
 }
 
 @test "runtime bootstrap applies the generated wallpaper through System Events" {
@@ -121,6 +139,76 @@ EOF
 	grep -Fq 'tell application "System Events"' "${BOOTSTRAP_SCRIPT}"
 	run grep -E 'com\.apple\.desktop|WallpaperAgent' "${BOOTSTRAP_SCRIPT}"
 	[ "${status}" -ne 0 ]
+}
+
+@test "runtime bootstrap sets the guest hostname to the vm name" {
+	printf '[]\n' >"${VM_VPN_WORKSPACE_ROOT}/bookmarks.json"
+	printf 'vm-vpn-demo-dev\n' >"${VM_VPN_WORKSPACE_ROOT}/.vm-name"
+
+	run "${BOOTSTRAP_SCRIPT}"
+	[ "${status}" -eq 0 ]
+	grep -Fq 'scutil --set HostName vm-vpn-demo-dev' "${SCUTIL_LOG}"
+	grep -Fq 'scutil --set LocalHostName vm-vpn-demo-dev' "${SCUTIL_LOG}"
+	grep -Fq 'scutil --set ComputerName vm-vpn-demo-dev' "${SCUTIL_LOG}"
+
+	: >"${SCUTIL_LOG}"
+	run "${BOOTSTRAP_SCRIPT}"
+	[ "${status}" -eq 0 ]
+	[ ! -s "${SCUTIL_LOG}" ]
+
+	printf 'vm-vpn-demo-prod\n' >"${VM_VPN_WORKSPACE_ROOT}/.vm-name"
+	run "${BOOTSTRAP_SCRIPT}"
+	[ "${status}" -eq 0 ]
+	grep -Fq 'scutil --set HostName vm-vpn-demo-prod' "${SCUTIL_LOG}"
+}
+
+@test "runtime bootstrap rejects an invalid vm name" {
+	printf '[]\n' >"${VM_VPN_WORKSPACE_ROOT}/bookmarks.json"
+	printf 'not; a; hostname\n' >"${VM_VPN_WORKSPACE_ROOT}/.vm-name"
+
+	run "${BOOTSTRAP_SCRIPT}"
+	[ "${status}" -ne 0 ]
+	printf '%s\n' "${output}" | grep -Fq 'invalid vm name'
+}
+
+@test "runtime bootstrap creates symlinks for mounts.json entries with a link" {
+	printf '[]\n' >"${VM_VPN_WORKSPACE_ROOT}/bookmarks.json"
+	mkdir -p "${VM_VPN_SHARED_ROOT}/code" "${VM_VPN_SHARED_ROOT}/reference"
+	cat >"${VM_VPN_WORKSPACE_ROOT}/mounts.json" <<EOF
+[
+  { "tag": "code", "source": "/host/workspace", "link": "~/code" },
+  { "tag": "reference", "source": "/opt/reference", "link": "${HOME}/refs/data", "readonly": true }
+]
+EOF
+
+	run "${BOOTSTRAP_SCRIPT}"
+	[ "${status}" -eq 0 ]
+	[ -L "${HOME}/code" ]
+	[ "$(readlink "${HOME}/code")" = "${VM_VPN_SHARED_ROOT}/code" ]
+	[ -L "${HOME}/refs/data" ]
+	[ "$(readlink "${HOME}/refs/data")" = "${VM_VPN_SHARED_ROOT}/reference" ]
+}
+
+@test "runtime bootstrap refreshes stale mount symlinks and refuses to clobber real paths" {
+	printf '[]\n' >"${VM_VPN_WORKSPACE_ROOT}/bookmarks.json"
+	mkdir -p "${VM_VPN_SHARED_ROOT}/code"
+	ln -s /nonexistent "${HOME}/code"
+	cat >"${VM_VPN_WORKSPACE_ROOT}/mounts.json" <<EOF
+[ { "tag": "code", "source": "/host/workspace", "link": "~/code" } ]
+EOF
+
+	run "${BOOTSTRAP_SCRIPT}"
+	[ "${status}" -eq 0 ]
+	[ "$(readlink "${HOME}/code")" = "${VM_VPN_SHARED_ROOT}/code" ]
+
+	rm "${HOME}/code"
+	mkdir -p "${HOME}/code"
+	touch "${HOME}/code/keep.txt"
+
+	run "${BOOTSTRAP_SCRIPT}"
+	[ "${status}" -ne 0 ]
+	printf '%s\n' "${output}" | grep -Fq "refusing to replace existing path"
+	[ -f "${HOME}/code/keep.txt" ]
 }
 
 @test "runtime bootstrap replaces VPN and bookmark configuration between starts" {

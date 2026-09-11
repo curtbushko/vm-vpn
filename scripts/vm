@@ -119,10 +119,13 @@ EOF
   // Uncomment and edit the entries below to expose additional host
   // directories to the guest. The workspace tag is reserved. ~ and ~/
   // in source expand to the invoking user's home directory. Set
-  // readonly: true to mount the path read-only.
+  // readonly: true to mount the path read-only. Set link to an
+  // absolute path (or ~/subpath) to create a symlink inside the guest
+  // that points at the shared directory.
   // {
   //   "tag": "code",
-  //   "source": "~/workspace"
+  //   "source": "~/workspace",
+  //   "link": "~/code"
   // },
   // {
   //   "tag": "reference",
@@ -192,6 +195,12 @@ mounts_state() {
 	      and (.source | type == "string")
 	      and (.source | length > 0)
 	      and ((.readonly // false) | type == "boolean")
+	      and (
+	        (has("link") | not)
+	        or ((.link | type == "string")
+	          and ((.link | length) > 0)
+	          and (.link | test("^(~($|/)|/)")))
+	      )
 	    )
 	    and ((map(.tag) | unique | length) == length)
 	  ' >/dev/null 2>&1; then
@@ -340,6 +349,8 @@ start_config() {
 	install -d -m 0700 "$RUNTIME_LOG_ROOT"
 	local runtime_log="$RUNTIME_LOG_ROOT/${vm_name}.log"
 	: >"$runtime_log"
+	printf '%s\n' "$vm_name" >"$config_path/.vm-name"
+	chmod 0600 "$config_path/.vm-name"
 	nohup tart run "$vm_name" --dir "workspace:$config_path" "${extra_mount_flags[@]}" \
 		>"$runtime_log" 2>&1 &
 	local tart_pid=$!

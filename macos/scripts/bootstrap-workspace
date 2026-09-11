@@ -5,6 +5,8 @@ set -euo pipefail
 export PATH="/opt/homebrew/bin:${PATH}"
 
 readonly WORKSPACE_ROOT="${VM_VPN_WORKSPACE_ROOT:-/Volumes/My Shared Files/workspace}"
+readonly SHARED_ROOT="${VM_VPN_SHARED_ROOT:-$(dirname "${WORKSPACE_ROOT}")}"
+readonly MOUNTS_SOURCE="${WORKSPACE_ROOT}/mounts.json"
 readonly AWS_VPN_CLIENT="${VM_VPN_AWS_VPN_CLIENT:-/usr/local/bin/aws-vpn-client}"
 readonly BOOKMARKS_SOURCE="${WORKSPACE_ROOT}/bookmarks.json"
 readonly APPEARANCE_SOURCE="${WORKSPACE_ROOT}/appearance.json"
@@ -16,6 +18,9 @@ readonly WALLPAPER_SOURCE_FILE="${STATE_ROOT}/wallpaper.ppm"
 readonly SIPS="${VM_VPN_SIPS:-/usr/bin/sips}"
 readonly OSASCRIPT="${VM_VPN_OSASCRIPT:-/usr/bin/osascript}"
 readonly PKILL="${VM_VPN_PKILL:-/usr/bin/pkill}"
+readonly SCUTIL="${VM_VPN_SCUTIL:-/usr/sbin/scutil}"
+readonly SUDO="${VM_VPN_SUDO:-/usr/bin/sudo}"
+readonly VM_NAME_FILE="${WORKSPACE_ROOT}/.vm-name"
 
 [[ -d "$WORKSPACE_ROOT" ]] || exit 0
 
@@ -97,6 +102,57 @@ if [[ -f "$BOOKMARKS_SOURCE" ]]; then
 		chmod 0600 "${STATE_ROOT}/bookmarks.checksum"
 		"$PKILL" -x firefox >/dev/null 2>&1 || true
 	fi
+fi
+
+if [[ -f "$VM_NAME_FILE" ]]; then
+	desired_hostname="$(<"$VM_NAME_FILE")"
+	desired_hostname="${desired_hostname%$'\n'}"
+	[[ "$desired_hostname" =~ ^[A-Za-z0-9][A-Za-z0-9-]*$ ]] || {
+		printf 'bootstrap-workspace: invalid vm name: %s\n' "$desired_hostname" >&2
+		exit 1
+	}
+	hostname_checksum="$(shasum -a 256 <<<"$desired_hostname" | awk '{ print $1 }')"
+	if [[ ! -f "${STATE_ROOT}/hostname.checksum" ]] ||
+		[[ "$(<"${STATE_ROOT}/hostname.checksum")" != "$hostname_checksum" ]]; then
+		"$SUDO" -n "$SCUTIL" --set HostName "$desired_hostname"
+		"$SUDO" -n "$SCUTIL" --set LocalHostName "$desired_hostname"
+		"$SUDO" -n "$SCUTIL" --set ComputerName "$desired_hostname"
+		printf '%s\n' "$hostname_checksum" >"${STATE_ROOT}/hostname.checksum"
+		chmod 0600 "${STATE_ROOT}/hostname.checksum"
+	fi
+fi
+
+if [[ -f "$MOUNTS_SOURCE" ]]; then
+	if ! command -v jq >/dev/null 2>&1; then
+		printf 'bootstrap-workspace: jq is required\n' >&2
+		exit 1
+	fi
+	mount_entries="$(sed -E 's|^[[:space:]]*//.*$||' "$MOUNTS_SOURCE" | jq -c '.[] | select(has("link"))')"
+	while IFS= read -r mount_entry; do
+		[[ -n "$mount_entry" ]] || continue
+		mount_tag="$(printf '%s' "$mount_entry" | jq -r '.tag')"
+		link_raw="$(printf '%s' "$mount_entry" | jq -r '.link')"
+		tilde='~'
+		if [[ "$link_raw" == "$tilde" ]]; then
+			link_path="$HOME"
+		elif [[ "${link_raw:0:2}" == "${tilde}/" ]]; then
+			link_path="${HOME}/${link_raw:2}"
+		else
+			link_path="$link_raw"
+		fi
+		target="${SHARED_ROOT}/${mount_tag}"
+		if [[ -L "$link_path" ]]; then
+			if [[ "$(readlink "$link_path")" == "$target" ]]; then
+				continue
+			fi
+			rm "$link_path"
+		elif [[ -e "$link_path" ]]; then
+			printf 'bootstrap-workspace: refusing to replace existing path at %s\n' "$link_path" >&2
+			exit 1
+		fi
+		install -d -m 0755 "$(dirname "$link_path")"
+		ln -s "$target" "$link_path"
+	done <<<"$mount_entries"
 fi
 
 if [[ -f "$APPEARANCE_SOURCE" ]]; then

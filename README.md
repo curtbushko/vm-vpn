@@ -112,11 +112,16 @@ Configs live outside the repository:
   the file to uncomment or add entries. Each entry needs a `tag` (used as
   the guest volume label; the tag `workspace` is reserved) and a `source`
   host path; `readonly: true` mounts it read-only. `~` and `~/` in `source`
-  expand to the invoking user's home directory. Example:
+  expand to the invoking user's home directory. Set `link` to an absolute
+  path (or `~/subpath`) to have the runtime bootstrap create a symlink at
+  that location inside the guest pointing at the shared directory — for
+  example `"link": "~/code"` makes the mount reachable as `~/code` in the
+  VM. The bootstrap refuses to overwrite an existing file or directory at
+  the link path. Example:
 
   ```json
   [
-    { "tag": "code", "source": "~/workspace" },
+    { "tag": "code", "source": "~/workspace", "link": "~/code" },
     { "tag": "reference", "source": "/opt/reference", "readonly": true }
   ]
   ```
@@ -223,7 +228,11 @@ Each config mounts only its own
   click **Allow** when macOS asks whether `tart-guest-agent` may control System
   Events.
 - Attaches any host directories declared in `mounts.json` as additional
-  read-write (or read-only) volumes.
+  read-write (or read-only) volumes, and creates the symlinks requested
+  by any `link` entries.
+- Sets the guest `HostName`, `LocalHostName`, and `ComputerName` to the
+  config's VM name (for example `vm-vpn-demo-dev`) via passwordless
+  `sudo scutil`.
 
 This prevents VPN profiles and bookmarks from accumulating across configs.
 Host-file changes take effect the next time that config starts.
