@@ -96,9 +96,9 @@ initialize_workspace() {
 	local config_path="$1"
 	local environment="$2"
 	umask 077
-	install -d -m 0700 "$config_path" "$config_path/vpn" "$config_path/bookmarks"
+	install -d -m 0700 "$config_path" "$config_path/vpn"
 	write_appearance "$config_path" "$environment"
-	cat >"$config_path/bookmarks/bookmarks.json" <<'EOF'
+	cat >"$config_path/bookmarks.json" <<'EOF'
 [
   {
     "title": "Company documentation",
@@ -110,7 +110,7 @@ initialize_workspace() {
   }
 ]
 EOF
-	chmod 0600 "$config_path/bookmarks/bookmarks.json"
+	chmod 0600 "$config_path/bookmarks.json"
 	cat >"$config_path/mounts.json" <<'EOF'
 [
   // Uncomment and edit the entries below to expose additional host
@@ -142,7 +142,7 @@ require_workspace() {
 
 bookmarks_state() {
 	local config_path="$1"
-	local bookmarks_file="${config_path}/bookmarks/bookmarks.json"
+	local bookmarks_file="${config_path}/bookmarks.json"
 	if [[ ! -f "$bookmarks_file" ]]; then
 		printf 'missing\n'
 	elif jq -e 'type == "array" and all(.[]; (.title | type == "string") and (.url | type == "string"))' \
@@ -480,11 +480,9 @@ seed_demo() {
 	[[ "$product/$environment" == "demo/dev" ]] || fail "only demo/dev has tracked example data"
 	local config_path
 	config_path="$(require_workspace "$product" "$environment")"
-	install -d -m 0700 "$config_path/shared"
 	cp "${REPO_ROOT}/examples/demo/dev/vpn/profile.ovpn" "$config_path/vpn/profile.ovpn"
-	cp "${REPO_ROOT}/examples/demo/dev/bookmarks/bookmarks.json" "$config_path/bookmarks/bookmarks.json"
-	cp "${REPO_ROOT}/examples/demo/dev/certs/demo-ca.crt" "$config_path/shared/demo-ca.crt"
-	chmod 0600 "$config_path/vpn/profile.ovpn" "$config_path/bookmarks/bookmarks.json" "$config_path/shared/demo-ca.crt"
+	cp "${REPO_ROOT}/examples/demo/dev/bookmarks.json" "$config_path/bookmarks.json"
+	chmod 0600 "$config_path/vpn/profile.ovpn" "$config_path/bookmarks.json"
 	printf 'seeded demo/dev at %s\n' "$config_path"
 }
 

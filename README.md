@@ -2,8 +2,8 @@
 
 Run isolated macOS VPN workspaces from host-managed configurations. Each
 `<product>/<environment>` config supplies its own AWS VPN profile, Firefox
-bookmarks, and shared files. Multiple configs can run concurrently; VM images
-and clones are managed internally.
+bookmarks, and optional host mounts. Multiple configs can run concurrently;
+VM images and clones are managed internally.
 
 ## Fresh-Mac quick start
 
@@ -90,20 +90,19 @@ Configs live outside the repository:
 ```text
 ~/.config/vm-vpn/<product>/<environment>/
 ├── appearance.json
+├── bookmarks.json
 ├── mounts.json
-├── vpn/
-│   ├── corporate.ovpn
-│   └── production.ovpn
-└── bookmarks/
-    └── bookmarks.json
+└── vpn/
+    ├── corporate.ovpn
+    └── production.ovpn
 ```
 
 - Every `vpn/*.ovpn` file is imported through the AWS VPN Client CLI. Its
   filename without `.ovpn` becomes the profile name, so `corporate.ovpn`
   appears as `corporate`. Profile filenames may contain letters, numbers,
   dots, underscores, and hyphens.
-- `bookmarks/bookmarks.json` defines its Firefox bookmark toolbar entries and
-  starts with two placeholder entries to edit or replace.
+- `bookmarks.json` defines its Firefox bookmark toolbar entries and starts
+  with two placeholder entries to edit or replace.
 - `appearance.json` sets `wallpaperColor` to a six-digit hex color. New configs
   use blue for `dev`, amber for `staging`, red for `prod`, purple for
   `awsgov-prod`, orange for `preprod`, teal for `hybridtest`, and slate for
@@ -150,7 +149,7 @@ task create -- <product> <environment>
 task create -- demo dev
 ```
 
-Add its VPN profile, bookmarks, and shared files, then check readiness:
+Add its VPN profile and bookmarks, then check readiness:
 
 ```console
 task validate -- <product> <environment>

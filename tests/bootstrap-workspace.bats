@@ -14,7 +14,7 @@ setup() {
 	export VM_VPN_PKILL="${BATS_TEST_TMPDIR}/bin/pkill"
 	export PKILL_LOG="${BATS_TEST_TMPDIR}/pkill.log"
 	export APPEARANCE_LOG="${BATS_TEST_TMPDIR}/appearance.log"
-	mkdir -p "${BATS_TEST_TMPDIR}/bin" "${VM_VPN_WORKSPACE_ROOT}/vpn" "${VM_VPN_WORKSPACE_ROOT}/bookmarks" "$(dirname "${VM_VPN_FIREFOX_POLICY_FILE}")"
+	mkdir -p "${BATS_TEST_TMPDIR}/bin" "${VM_VPN_WORKSPACE_ROOT}/vpn" "$(dirname "${VM_VPN_FIREFOX_POLICY_FILE}")"
 	cat >"${VM_VPN_PKILL}" <<'EOF'
 #!/usr/bin/env bash
 printf 'pkill %s\n' "$*" >>"${PKILL_LOG}"
@@ -43,7 +43,7 @@ EOF
 }
 
 @test "runtime bootstrap applies the generated wallpaper through System Events" {
-	printf '[]\n' >"${VM_VPN_WORKSPACE_ROOT}/bookmarks/bookmarks.json"
+	printf '[]\n' >"${VM_VPN_WORKSPACE_ROOT}/bookmarks.json"
 	printf '{"wallpaperColor":"#D97706"}\n' >"${VM_VPN_WORKSPACE_ROOT}/appearance.json"
 
 	run "${BOOTSTRAP_SCRIPT}"
@@ -64,7 +64,7 @@ EOF
 }
 
 @test "runtime bootstrap quits Firefox only when bookmarks change" {
-	printf '[{"title":"Development","url":"https://developer.mozilla.org/"}]\n' >"${VM_VPN_WORKSPACE_ROOT}/bookmarks/bookmarks.json"
+	printf '[{"title":"Development","url":"https://developer.mozilla.org/"}]\n' >"${VM_VPN_WORKSPACE_ROOT}/bookmarks.json"
 
 	run "${BOOTSTRAP_SCRIPT}"
 	[ "${status}" -eq 0 ]
@@ -75,14 +75,14 @@ EOF
 	[ "${status}" -eq 0 ]
 	[ ! -s "${PKILL_LOG}" ]
 
-	printf '[{"title":"Production","url":"https://docs.aws.amazon.com/vpn/"}]\n' >"${VM_VPN_WORKSPACE_ROOT}/bookmarks/bookmarks.json"
+	printf '[{"title":"Production","url":"https://docs.aws.amazon.com/vpn/"}]\n' >"${VM_VPN_WORKSPACE_ROOT}/bookmarks.json"
 	run "${BOOTSTRAP_SCRIPT}"
 	[ "${status}" -eq 0 ]
 	grep -Fq 'pkill -x firefox' "${PKILL_LOG}"
 }
 
 @test "runtime bootstrap announces the permissions prompt on first boot only" {
-	printf '[]\n' >"${VM_VPN_WORKSPACE_ROOT}/bookmarks/bookmarks.json"
+	printf '[]\n' >"${VM_VPN_WORKSPACE_ROOT}/bookmarks.json"
 
 	run "${BOOTSTRAP_SCRIPT}"
 	[ "${status}" -eq 0 ]
@@ -95,7 +95,7 @@ EOF
 }
 
 @test "runtime bootstrap quits AWS VPN Client only when profiles change" {
-	printf '[]\n' >"${VM_VPN_WORKSPACE_ROOT}/bookmarks/bookmarks.json"
+	printf '[]\n' >"${VM_VPN_WORKSPACE_ROOT}/bookmarks.json"
 	printf 'remote dev.example.com 443\n' >"${VM_VPN_WORKSPACE_ROOT}/vpn/development.ovpn"
 
 	run "${BOOTSTRAP_SCRIPT}"
@@ -126,7 +126,7 @@ EOF
 @test "runtime bootstrap replaces VPN and bookmark configuration between starts" {
 	printf 'remote dev.example.com 443\n' >"${VM_VPN_WORKSPACE_ROOT}/vpn/development.ovpn"
 	printf 'remote staging.example.com 443\n' >"${VM_VPN_WORKSPACE_ROOT}/vpn/staging.ovpn"
-	printf '[{"title":"Development","url":"https://developer.mozilla.org/"}]\n' >"${VM_VPN_WORKSPACE_ROOT}/bookmarks/bookmarks.json"
+	printf '[{"title":"Development","url":"https://developer.mozilla.org/"}]\n' >"${VM_VPN_WORKSPACE_ROOT}/bookmarks.json"
 
 	run "${BOOTSTRAP_SCRIPT}"
 	[ "${status}" -eq 0 ]
@@ -136,7 +136,7 @@ EOF
 
 	mv "${VM_VPN_WORKSPACE_ROOT}/vpn/development.ovpn" "${VM_VPN_WORKSPACE_ROOT}/vpn/production.ovpn"
 	printf 'remote prod.example.com 443\n' >"${VM_VPN_WORKSPACE_ROOT}/vpn/production.ovpn"
-	printf '[{"title":"Production","url":"https://docs.aws.amazon.com/vpn/"}]\n' >"${VM_VPN_WORKSPACE_ROOT}/bookmarks/bookmarks.json"
+	printf '[{"title":"Production","url":"https://docs.aws.amazon.com/vpn/"}]\n' >"${VM_VPN_WORKSPACE_ROOT}/bookmarks.json"
 
 	run "${BOOTSTRAP_SCRIPT}"
 	[ "${status}" -eq 0 ]

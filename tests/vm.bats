@@ -54,19 +54,21 @@ EOF
 	run "${VM_SCRIPT}" create demo dev
 	[ "${status}" -eq 0 ]
 	[ -d "${VM_VPN_CONFIG_HOME}/demo/dev/vpn" ]
-	[ -d "${VM_VPN_CONFIG_HOME}/demo/dev/bookmarks" ]
+	[ ! -e "${VM_VPN_CONFIG_HOME}/demo/dev/bookmarks" ]
 	[ ! -e "${VM_VPN_CONFIG_HOME}/demo/dev/shared" ]
+	[ ! -e "${VM_VPN_CONFIG_HOME}/demo/dev/certs" ]
 	[ ! -e "${VM_VPN_CONFIG_HOME}/demo/dev/mounts.json.example" ]
 	[ -f "${VM_VPN_CONFIG_HOME}/demo/dev/mounts.json" ]
+	[ -f "${VM_VPN_CONFIG_HOME}/demo/dev/bookmarks.json" ]
 	grep -Fq '// {' "${VM_VPN_CONFIG_HOME}/demo/dev/mounts.json"
 	grep -Fq '"tag": "code"' "${VM_VPN_CONFIG_HOME}/demo/dev/mounts.json"
 	grep -Fq '"source": "~/workspace"' "${VM_VPN_CONFIG_HOME}/demo/dev/mounts.json"
 	[ "$(jq -r '.wallpaperColor' "${VM_VPN_CONFIG_HOME}/demo/dev/appearance.json")" = "#7895A8" ]
-	[ "$(jq -r 'length' "${VM_VPN_CONFIG_HOME}/demo/dev/bookmarks/bookmarks.json")" -eq 2 ]
-	[ "$(jq -r '.[0].title' "${VM_VPN_CONFIG_HOME}/demo/dev/bookmarks/bookmarks.json")" = "Company documentation" ]
-	[ "$(jq -r '.[0].url' "${VM_VPN_CONFIG_HOME}/demo/dev/bookmarks/bookmarks.json")" = "https://docs.example.com/" ]
-	[ "$(jq -r '.[1].title' "${VM_VPN_CONFIG_HOME}/demo/dev/bookmarks/bookmarks.json")" = "Service dashboard" ]
-	[ "$(jq -r '.[1].url' "${VM_VPN_CONFIG_HOME}/demo/dev/bookmarks/bookmarks.json")" = "https://dashboard.example.com/" ]
+	[ "$(jq -r 'length' "${VM_VPN_CONFIG_HOME}/demo/dev/bookmarks.json")" -eq 2 ]
+	[ "$(jq -r '.[0].title' "${VM_VPN_CONFIG_HOME}/demo/dev/bookmarks.json")" = "Company documentation" ]
+	[ "$(jq -r '.[0].url' "${VM_VPN_CONFIG_HOME}/demo/dev/bookmarks.json")" = "https://docs.example.com/" ]
+	[ "$(jq -r '.[1].title' "${VM_VPN_CONFIG_HOME}/demo/dev/bookmarks.json")" = "Service dashboard" ]
+	[ "$(jq -r '.[1].url' "${VM_VPN_CONFIG_HOME}/demo/dev/bookmarks.json")" = "https://dashboard.example.com/" ]
 	[ ! -s "${TART_LOG}" ]
 
 	run "${VM_SCRIPT}" create demo dev
@@ -178,6 +180,18 @@ EOF
 	grep -Fq 'clone vm-vpn-base vm-vpn-demo-staging' "${TART_LOG}"
 	grep -Fq 'clone vm-vpn-base vm-vpn-demo-prod' "${TART_LOG}"
 	grep -Fq 'clone vm-vpn-base vm-vpn-internal_tools-prod_east' "${TART_LOG}"
+}
+
+@test "seed populates demo/dev with only vpn profile and bookmarks" {
+	"${VM_SCRIPT}" create demo dev
+
+	run "${VM_SCRIPT}" seed demo dev
+	[ "${status}" -eq 0 ]
+	[ -f "${VM_VPN_CONFIG_HOME}/demo/dev/vpn/profile.ovpn" ]
+	[ -f "${VM_VPN_CONFIG_HOME}/demo/dev/bookmarks.json" ]
+	[ ! -e "${VM_VPN_CONFIG_HOME}/demo/dev/bookmarks" ]
+	[ ! -e "${VM_VPN_CONFIG_HOME}/demo/dev/shared" ]
+	[ ! -e "${VM_VPN_CONFIG_HOME}/demo/dev/certs" ]
 }
 
 @test "validate reports bookmark and VPN readiness" {

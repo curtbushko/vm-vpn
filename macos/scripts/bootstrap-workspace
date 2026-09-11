@@ -6,7 +6,7 @@ export PATH="/opt/homebrew/bin:${PATH}"
 
 readonly WORKSPACE_ROOT="${VM_VPN_WORKSPACE_ROOT:-/Volumes/My Shared Files/workspace}"
 readonly AWS_VPN_CLIENT="${VM_VPN_AWS_VPN_CLIENT:-/usr/local/bin/aws-vpn-client}"
-readonly BOOKMARKS_SOURCE="${WORKSPACE_ROOT}/bookmarks/bookmarks.json"
+readonly BOOKMARKS_SOURCE="${WORKSPACE_ROOT}/bookmarks.json"
 readonly APPEARANCE_SOURCE="${WORKSPACE_ROOT}/appearance.json"
 readonly FIREFOX_POLICY_FILE="${VM_VPN_FIREFOX_POLICY_FILE:-/Applications/Firefox.app/Contents/Resources/distribution/policies.json}"
 readonly STATE_ROOT="${VM_VPN_STATE_ROOT:-${HOME}/.local/state/vm-vpn}"
