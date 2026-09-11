@@ -134,6 +134,8 @@ setup() {
 	grep -Fq 'Catppuccin Mocha' "${CONFIGURE_SCRIPT}"
 	grep -Fq 'auto-update = off' "${CONFIGURE_SCRIPT}"
 	grep -Fq 'desktop-notifications = false' "${CONFIGURE_SCRIPT}"
+	grep -Fq 'com.apple.ncprefs' "${CONFIGURE_SCRIPT}"
+	grep -Fq 'com.mitchellh.ghostty' "${CONFIGURE_SCRIPT}"
 	run grep -F 'vim.opt.background' "${CONFIGURE_SCRIPT}"
 	[ "${status}" -ne 0 ]
 	grep -Fq 'DisplayBookmarksToolbar' "${CONFIGURE_SCRIPT}"

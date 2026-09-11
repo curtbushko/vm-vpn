@@ -130,6 +130,9 @@ chmod 0600 "$TART_AGENT"
 # Keep the literal invocation visible for operators inspecting the generated
 # launch agent: tart-guest-agent --run-agent
 
+defaults write com.apple.ncprefs apps -array-add \
+	'{ "bundle-id" = "com.mitchellh.ghostty"; flags = 8460; }'
+
 defaults write NSGlobalDomain AppleInterfaceStyle -string Dark
 defaults write NSGlobalDomain AppleInterfaceStyleSwitchesAutomatically -bool false
 defaults write NSGlobalDomain AppleLanguages -array "en-US"
