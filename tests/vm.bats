@@ -56,10 +56,11 @@ EOF
 	[ -d "${VM_VPN_CONFIG_HOME}/demo/dev/vpn" ]
 	[ -d "${VM_VPN_CONFIG_HOME}/demo/dev/bookmarks" ]
 	[ ! -e "${VM_VPN_CONFIG_HOME}/demo/dev/shared" ]
-	[ -f "${VM_VPN_CONFIG_HOME}/demo/dev/mounts.json.example" ]
-	[ ! -e "${VM_VPN_CONFIG_HOME}/demo/dev/mounts.json" ]
-	jq -e 'type == "array" and length > 0 and (.[0] | has("tag") and has("source"))' \
-		"${VM_VPN_CONFIG_HOME}/demo/dev/mounts.json.example"
+	[ ! -e "${VM_VPN_CONFIG_HOME}/demo/dev/mounts.json.example" ]
+	[ -f "${VM_VPN_CONFIG_HOME}/demo/dev/mounts.json" ]
+	grep -Fq '// {' "${VM_VPN_CONFIG_HOME}/demo/dev/mounts.json"
+	grep -Fq '"tag": "code"' "${VM_VPN_CONFIG_HOME}/demo/dev/mounts.json"
+	grep -Fq '"source": "~/workspace"' "${VM_VPN_CONFIG_HOME}/demo/dev/mounts.json"
 	[ "$(jq -r '.wallpaperColor' "${VM_VPN_CONFIG_HOME}/demo/dev/appearance.json")" = "#7895A8" ]
 	[ "$(jq -r 'length' "${VM_VPN_CONFIG_HOME}/demo/dev/bookmarks/bookmarks.json")" -eq 2 ]
 	[ "$(jq -r '.[0].title' "${VM_VPN_CONFIG_HOME}/demo/dev/bookmarks/bookmarks.json")" = "Company documentation" ]

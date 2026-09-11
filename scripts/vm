@@ -111,20 +111,24 @@ initialize_workspace() {
 ]
 EOF
 	chmod 0600 "$config_path/bookmarks/bookmarks.json"
-	cat >"$config_path/mounts.json.example" <<'EOF'
+	cat >"$config_path/mounts.json" <<'EOF'
 [
-  {
-    "tag": "code",
-    "source": "~/workspace"
-  },
-  {
-    "tag": "reference",
-    "source": "/opt/reference",
-    "readonly": true
-  }
+  // Uncomment and edit the entries below to expose additional host
+  // directories to the guest. The workspace tag is reserved. ~ and ~/
+  // in source expand to the invoking user's home directory. Set
+  // readonly: true to mount the path read-only.
+  // {
+  //   "tag": "code",
+  //   "source": "~/workspace"
+  // },
+  // {
+  //   "tag": "reference",
+  //   "source": "/opt/reference",
+  //   "readonly": true
+  // }
 ]
 EOF
-	chmod 0600 "$config_path/mounts.json.example"
+	chmod 0600 "$config_path/mounts.json"
 }
 
 require_workspace() {
@@ -162,6 +166,13 @@ appearance_state() {
 	fi
 }
 
+read_mounts_json() {
+	# Strip //-style line comments so users can leave example entries
+	# commented out. Only whole-line comments are removed to avoid touching
+	# any // that appears inside a JSON string value.
+	sed -E 's|^[[:space:]]*//.*$||' "$1"
+}
+
 mounts_state() {
 	local config_path="$1"
 	local mounts_file="${config_path}/mounts.json"
@@ -169,7 +180,7 @@ mounts_state() {
 		printf 'none\n'
 		return 0
 	fi
-	if ! jq -e '
+	if ! read_mounts_json "$mounts_file" | jq -e '
 	    type == "array"
 	    and all(.[];
 	      (.tag | type == "string")
@@ -180,8 +191,12 @@ mounts_state() {
 	      and ((.readonly // false) | type == "boolean")
 	    )
 	    and ((map(.tag) | unique | length) == length)
-	  ' "$mounts_file" >/dev/null 2>&1; then
+	  ' >/dev/null 2>&1; then
 		printf 'invalid\n'
+		return 0
+	fi
+	if [[ "$(read_mounts_json "$mounts_file" | jq 'length')" -eq 0 ]]; then
+		printf 'none\n'
 		return 0
 	fi
 	printf 'valid\n'
@@ -203,10 +218,11 @@ check_mount_sources() {
 	local config_path="$1"
 	local mounts_file="${config_path}/mounts.json"
 	[[ -f "$mounts_file" ]] || return 0
-	local count index source_raw source
-	count="$(jq 'length' "$mounts_file")"
+	local decoded count index source_raw source
+	decoded="$(read_mounts_json "$mounts_file")"
+	count="$(printf '%s' "$decoded" | jq 'length')"
 	for ((index = 0; index < count; index++)); do
-		source_raw="$(jq -r ".[$index].source" "$mounts_file")"
+		source_raw="$(printf '%s' "$decoded" | jq -r ".[$index].source")"
 		source="$(expand_mount_source "$source_raw")"
 		[[ -d "$source" ]] || fail "mount source is missing: $source_raw"
 	done
@@ -216,12 +232,13 @@ mount_flags() {
 	local config_path="$1"
 	local mounts_file="${config_path}/mounts.json"
 	[[ -f "$mounts_file" ]] || return 0
-	local count index tag source_raw source read_only
-	count="$(jq 'length' "$mounts_file")"
+	local decoded count index tag source_raw source read_only
+	decoded="$(read_mounts_json "$mounts_file")"
+	count="$(printf '%s' "$decoded" | jq 'length')"
 	for ((index = 0; index < count; index++)); do
-		tag="$(jq -r ".[$index].tag" "$mounts_file")"
-		source_raw="$(jq -r ".[$index].source" "$mounts_file")"
-		read_only="$(jq -r ".[$index].readonly // false" "$mounts_file")"
+		tag="$(printf '%s' "$decoded" | jq -r ".[$index].tag")"
+		source_raw="$(printf '%s' "$decoded" | jq -r ".[$index].source")"
+		read_only="$(printf '%s' "$decoded" | jq -r ".[$index].readonly // false")"
 		source="$(expand_mount_source "$source_raw")"
 		if [[ "$read_only" == "true" ]]; then
 			printf -- '--dir\n%s:%s:ro\n' "$tag" "$source"

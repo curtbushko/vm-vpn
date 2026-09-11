@@ -90,8 +90,7 @@ Configs live outside the repository:
 ```text
 ~/.config/vm-vpn/<product>/<environment>/
 ├── appearance.json
-├── mounts.json          # optional; rename mounts.json.example to enable
-├── mounts.json.example
+├── mounts.json
 ├── vpn/
 │   ├── corporate.ovpn
 │   └── production.ovpn
@@ -109,12 +108,12 @@ Configs live outside the repository:
   use blue for `dev`, amber for `staging`, red for `prod`, purple for
   `awsgov-prod`, orange for `preprod`, teal for `hybridtest`, and slate for
   other environments. Edit the generated value to override it.
-- `mounts.json` is optional and adds extra host directories to the guest at
-  start time. `task create` writes `mounts.json.example`; rename or copy it
-  to `mounts.json` and edit the entries to enable them. Each entry needs a
-  `tag` (used as the guest volume label; the tag `workspace` is reserved)
-  and a `source` host path; `readonly: true` mounts it read-only. `~` and
-  `~/` in `source` expand to the invoking user's home directory. Example:
+- `mounts.json` adds extra host directories to the guest at start time.
+  `task create` writes it with example entries commented out with `//`; edit
+  the file to uncomment or add entries. Each entry needs a `tag` (used as
+  the guest volume label; the tag `workspace` is reserved) and a `source`
+  host path; `readonly: true` mounts it read-only. `~` and `~/` in `source`
+  expand to the invoking user's home directory. Example:
 
   ```json
   [
