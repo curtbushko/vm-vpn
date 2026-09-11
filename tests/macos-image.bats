@@ -81,16 +81,20 @@ setup() {
 
 @test "macOS Dock customization is flushed before image shutdown" {
 	cleanup_script="${REPO_ROOT}/macos/scripts/cleanup-apps"
-	pre_kill_line="$(grep -n 'killall -KILL cfprefsd Dock' "$cleanup_script" | head -n 1 | cut -d: -f1)"
+	bootout_line="$(grep -n 'launchctl bootout .*com.apple.Dock.agent' "$cleanup_script" | head -n 1 | cut -d: -f1)"
+	kill_dock_line="$(grep -n 'killall -KILL Dock' "$cleanup_script" | head -n 1 | cut -d: -f1)"
 	remove_line="$(grep -n 'dockutil --remove all' "$cleanup_script" | cut -d: -f1)"
-	post_kill_line="$(grep -n 'killall -KILL cfprefsd' "$cleanup_script" | tail -n 1 | cut -d: -f1)"
+	flush_line="$(grep -n 'killall -TERM cfprefsd' "$cleanup_script" | tail -n 1 | cut -d: -f1)"
 	sleep_line="$(grep -n '^sleep 2$' "$cleanup_script" | cut -d: -f1)"
 	sync_line="$(grep -n '^sync$' "$cleanup_script" | cut -d: -f1)"
-	[ "$pre_kill_line" -lt "$remove_line" ]
-	[ "$remove_line" -lt "$post_kill_line" ]
-	[ "$post_kill_line" -lt "$sleep_line" ]
+	[ "$bootout_line" -lt "$kill_dock_line" ]
+	[ "$kill_dock_line" -lt "$remove_line" ]
+	[ "$remove_line" -lt "$flush_line" ]
+	[ "$flush_line" -lt "$sleep_line" ]
 	[ "$sleep_line" -lt "$sync_line" ]
 	run grep -Fn '^killall Dock$' "$cleanup_script"
+	[ "${status}" -ne 0 ]
+	run grep -Fn 'killall -KILL cfprefsd' "$cleanup_script"
 	[ "${status}" -ne 0 ]
 }
 

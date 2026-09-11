@@ -76,9 +76,11 @@ while IFS= read -r tap; do
 done < <(brew tap)
 brew cleanup --prune=all
 
-# SIGKILL Dock and cfprefsd before touching the plist so Dock cannot serialize
-# its default in-memory layout on quit and overwrite the customization.
-killall -KILL cfprefsd Dock 2>/dev/null || true
+# Stop launchd from resurrecting Dock while we rewrite its plist; otherwise a
+# respawn between --remove and --add races dockutil and reseeds the 19-item
+# default. cfprefsd stays alive so it can receive dockutil's writes.
+launchctl bootout "gui/$(id -u)/com.apple.Dock.agent" 2>/dev/null || true
+killall -KILL Dock 2>/dev/null || true
 
 dockutil --remove all --no-restart
 for app in "${dock_apps[@]}"; do
@@ -87,9 +89,10 @@ for app in "${dock_apps[@]}"; do
 	fi
 done
 
-# Drop cfprefsd's in-memory cache so the next reader picks up the writes, then
-# let launchd relaunch Dock against the customized plist.
-killall -KILL cfprefsd 2>/dev/null || true
+# SIGTERM (not SIGKILL) cfprefsd so it flushes dockutil's pending CFPreferences
+# writes to disk before exiting; SIGKILL would drop them and the next boot
+# would see the stock Dock.
+killall -TERM cfprefsd 2>/dev/null || true
 sleep 2
 sync
 
