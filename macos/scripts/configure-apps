@@ -130,8 +130,14 @@ chmod 0600 "$TART_AGENT"
 # Keep the literal invocation visible for operators inspecting the generated
 # launch agent: tart-guest-agent --run-agent
 
-defaults write com.apple.ncprefs apps -array-add \
-	'{ "bundle-id" = "com.mitchellh.ghostty"; flags = 8460; }'
+for notification_bundle_id in \
+	com.mitchellh.ghostty \
+	com.amazonaws.acvc.mac.gui \
+	com.amazonaws.acvc.mac.svc \
+	co.cirius.acvc.autoupdate; do
+	defaults write com.apple.ncprefs apps -array-add \
+		"{ \"bundle-id\" = \"${notification_bundle_id}\"; flags = 8460; }"
+done
 
 defaults write NSGlobalDomain AppleInterfaceStyle -string Dark
 defaults write NSGlobalDomain AppleInterfaceStyleSwitchesAutomatically -bool false
