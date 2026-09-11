@@ -139,6 +139,7 @@ setup() {
 	grep -Fq 'com.amazonaws.acvc.mac.gui' "${CONFIGURE_SCRIPT}"
 	grep -Fq 'com.amazonaws.acvc.mac.svc' "${CONFIGURE_SCRIPT}"
 	grep -Fq 'com.cirruslabs.tart-guest-agent' "${CONFIGURE_SCRIPT}"
+	grep -Fq 'com.apple.backgroundtaskmanagementagent' "${CONFIGURE_SCRIPT}"
 	run grep -F 'vim.opt.background' "${CONFIGURE_SCRIPT}"
 	[ "${status}" -ne 0 ]
 	grep -Fq 'DisplayBookmarksToolbar' "${CONFIGURE_SCRIPT}"

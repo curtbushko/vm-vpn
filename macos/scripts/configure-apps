@@ -134,7 +134,8 @@ for notification_bundle_id in \
 	com.mitchellh.ghostty \
 	com.amazonaws.acvc.mac.gui \
 	com.amazonaws.acvc.mac.svc \
-	com.cirruslabs.tart-guest-agent; do
+	com.cirruslabs.tart-guest-agent \
+	com.apple.backgroundtaskmanagementagent; do
 	defaults write com.apple.ncprefs apps -array-add \
 		"{ \"bundle-id\" = \"${notification_bundle_id}\"; flags = 8460; }"
 done
