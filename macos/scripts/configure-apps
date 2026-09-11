@@ -76,7 +76,7 @@ sudo tee "${FIREFOX_POLICY_FILE}" >/dev/null <<'EOF'
       "intl.locale.requested": "en-US",
       "sidebar.revamp": { "Value": false, "Status": "locked" },
       "sidebar.verticalTabs": { "Value": false, "Status": "locked" },
-      "security.webauthn.enable_macos_passkeys": { "Value": true, "Status": "locked" },
+      "security.webauthn.enable_macos_passkeys": { "Value": false, "Status": "locked" },
       "security.webauth.webauthn_enable_softtoken": { "Value": true, "Status": "locked" },
       "ui.systemUsesDarkTheme": 1
     }
