@@ -108,7 +108,7 @@ Configs live outside the repository:
   use blue for `dev`, amber for `staging`, red for `prod`, purple for
   `awsgov-prod`, orange for `preprod`, teal for `hybridtest`, and slate for
   other environments. Edit the generated value to override it.
-- `shared/` contains other files that should be mounted read-only.
+- `shared/` contains other files that the guest can read and write.
 
 Bookmark entries use this format:
 
@@ -205,7 +205,7 @@ Each config mounts only its own
 - Applies the mounted `appearance.json` color as the VM wallpaper. On first use,
   click **Allow** when macOS asks whether `tart-guest-agent` may control System
   Events.
-- Makes `shared/` available through the read-only workspace mount.
+- Makes `shared/` available through the read-write workspace mount.
 
 This prevents VPN profiles and bookmarks from accumulating across configs.
 Host-file changes take effect the next time that config starts.

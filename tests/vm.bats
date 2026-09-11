@@ -119,7 +119,9 @@ EOF
 	[[ "${output}" == *"runtime: reusing existing runtime"* ]]
 
 	[ "$(grep -Fc 'clone vm-vpn-base vm-vpn-demo-dev' "${TART_LOG}")" -eq 1 ]
-	[ "$(grep -Fc "run vm-vpn-demo-dev --dir workspace:${VM_VPN_CONFIG_HOME}/demo/dev:ro" "${TART_LOG}")" -eq 2 ]
+	[ "$(grep -Fc "run vm-vpn-demo-dev --dir workspace:${VM_VPN_CONFIG_HOME}/demo/dev" "${TART_LOG}")" -eq 2 ]
+	run grep -F ":ro" "${TART_LOG}"
+	[ "${status}" -ne 0 ]
 }
 
 @test "start migrates missing appearance and rejects invalid colors" {

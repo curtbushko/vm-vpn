@@ -224,7 +224,7 @@ start_config() {
 		printf 'runtime: reusing existing runtime\n'
 	fi
 	printf 'runtime: starting\nbootstrap logs: task logs -- %s %s\n' "$product" "$environment"
-	exec tart run "$vm_name" --dir "workspace:$config_path:ro"
+	exec tart run "$vm_name" --dir "workspace:$config_path"
 }
 
 stop_config() {
