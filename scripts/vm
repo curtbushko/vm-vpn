@@ -13,6 +13,7 @@ readonly BASE_MARKER="${VM_VPN_BASE_MARKER:-${CONFIG_ROOT}/.base-image-ready}"
 readonly RUNTIME_LOG_ROOT="${VM_VPN_RUNTIME_LOG_ROOT:-${XDG_STATE_HOME:-${HOME}/.local/state}/vm-vpn}"
 readonly RUNTIME_READY_TIMEOUT="${VM_VPN_READY_TIMEOUT:-90}"
 readonly RUNTIME_READY_POLL_INTERVAL="${VM_VPN_READY_POLL_INTERVAL:-1}"
+readonly -a DEFAULT_ENVIRONMENTS=(dev staging prod hybridtest preprod awsgov-prod)
 
 fail() {
 	printf 'vm: %s\n' "$*" >&2
@@ -660,6 +661,12 @@ main() {
 	image-status)
 		[[ $# -eq 1 ]] || fail "usage: task image:status"
 		image_status
+		;;
+	environments)
+		[[ $# -eq 1 ]] || fail "usage: task environments"
+		for env in "${DEFAULT_ENVIRONMENTS[@]}"; do
+			printf '%-12s %s\n' "$env" "$(appearance_color "$env")"
+		done
 		;;
 	doctor)
 		[[ $# -eq 1 ]] || fail "usage: task doctor"

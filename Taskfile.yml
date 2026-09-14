@@ -55,6 +55,7 @@ tasks:
           '  task image:build [-- WxH] Build the runtime image; WxH e.g. 1280x800' \
           '                            sets guest display (default 1024x768).' \
           '  task image:status         Diagnose the internal runtime image.' \
+          '  task environments         List default environments and wallpaper colors.' \
           '  task doctor               Verify development-shell tools.' \
           '  task check                Run all project quality gates.' \
           '  task help                 Show this guide; also the default task.' \
@@ -195,6 +196,11 @@ tasks:
     desc: Show Tart details for the internal shared runtime image.
     cmds:
       - ./scripts/vm image-status
+
+  environments:
+    desc: List the default environment names and their wallpaper colors.
+    cmds:
+      - ./scripts/vm environments
 
   doctor:
     desc: Verify all development-shell tools are available.
