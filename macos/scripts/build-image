@@ -74,6 +74,12 @@ packer build -color=false \
 	-var "display=${display}" \
 	macos/packer/vpn-workspace.pkr.hcl
 
+# The Packer tart plugin does not always persist the display resolution or
+# refit setting onto the cloned VM, so force them now. --no-display-refit
+# keeps the guest at "$display" no matter how large the Tart window is on the
+# host, which matters on ultrawide monitors.
+tart set "$BUILD_VM_NAME" --display "$display" --no-display-refit
+
 # Let Virtualization.Framework release Packer's cloned disk before the
 # provisioning boot. Keep Tart attached to this terminal because detached
 # AppKit launches can fail to start guests on current macOS hosts.
