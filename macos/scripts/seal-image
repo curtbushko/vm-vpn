@@ -43,6 +43,7 @@ defaults write com.apple.universalaccess reduceTransparency -bool true || true
 defaults write com.apple.dock launchanim -bool false
 defaults write com.apple.dock expose-animation-duration -float 0.1
 defaults write com.apple.dock autohide-time-modifier -float 0
+defaults write com.apple.dock tilesize -int 24
 defaults write com.apple.WindowManager GloballyEnabled -bool false
 defaults write com.apple.WindowManager StandardHideWidgets -bool true
 defaults write com.apple.WindowManager StageManagerHideWidgets -bool true
