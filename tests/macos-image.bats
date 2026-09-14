@@ -134,6 +134,8 @@ setup() {
 	grep -Fq 'bash -s -- "$host_timezone"' "${REPO_ROOT}/macos/scripts/provision-vm"
 	grep -Fq 'systemsetup -settimezone' "${CONFIGURE_SCRIPT}"
 	grep -Fq 'GUEST_TIMEZONE="${1:-UTC}"' "${CONFIGURE_SCRIPT}"
+	grep -Fq 'ln -sfh "$zoneinfo_path" /var/db/timezone/localtime' "${CONFIGURE_SCRIPT}"
+	grep -Fq 'com.apple.timezone.auto Active -bool false' "${CONFIGURE_SCRIPT}"
 }
 
 @test "macOS applications receive workspace defaults" {

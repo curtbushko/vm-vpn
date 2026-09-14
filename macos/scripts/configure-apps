@@ -4,9 +4,16 @@ set -euo pipefail
 
 # The host passes its zoneinfo name (e.g. America/Toronto) as $1 so the
 # guest clock matches the host. Fall back to UTC when nothing is provided.
+# systemsetup silently no-ops under some macOS configurations, so also flip
+# the localtime symlink directly (which is what the OS actually reads) and
+# disable automatic timezone updates driven by Location Services.
 readonly GUEST_TIMEZONE="${1:-UTC}"
-if [[ -f "/usr/share/zoneinfo/${GUEST_TIMEZONE}" ]]; then
-	sudo /usr/sbin/systemsetup -settimezone "$GUEST_TIMEZONE" >/dev/null
+readonly zoneinfo_path="/var/db/timezone/zoneinfo/${GUEST_TIMEZONE}"
+if [[ -f "$zoneinfo_path" ]]; then
+	sudo /usr/bin/defaults write /Library/Preferences/com.apple.timezone.auto Active -bool false
+	sudo /bin/ln -sfh "$zoneinfo_path" /var/db/timezone/localtime
+	sudo /usr/sbin/systemsetup -settimezone "$GUEST_TIMEZONE" >/dev/null 2>&1 || true
+	printf 'configure-apps: guest timezone set to %s\n' "$GUEST_TIMEZONE"
 else
 	printf 'configure-apps: unknown timezone %s; leaving guest unchanged\n' "$GUEST_TIMEZONE" >&2
 fi
