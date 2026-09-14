@@ -62,43 +62,9 @@ shutdown_build_guest() {
 }
 trap stop_build_guest EXIT
 
-# Size the guest display to ~80% of the host's main logical display so the VM
-# window fits comfortably on any Mac. Users can pin an explicit resolution
-# with VM_VPN_DISPLAY=WIDTHxHEIGHT.
-detect_display() {
-	if [[ -n "${VM_VPN_DISPLAY:-}" ]]; then
-		printf '%s' "$VM_VPN_DISPLAY"
-		return
-	fi
-	local profile dims retina=0
-	profile="$(system_profiler SPDisplaysDataType 2>/dev/null)"
-	dims="$(printf '%s' "$profile" | awk '
-		/UI Looks like:/ {
-			if (match($0, /[0-9]+ x [0-9]+/)) { print substr($0, RSTART, RLENGTH); exit }
-		}
-	')"
-	if [[ -z "$dims" ]]; then
-		local resline
-		resline="$(printf '%s' "$profile" | awk '/Resolution:/ { print; exit }')"
-		if [[ "$resline" == *Retina* ]]; then
-			retina=1
-		fi
-		dims="$(printf '%s' "$resline" | awk '{ if (match($0, /[0-9]+ x [0-9]+/)) print substr($0, RSTART, RLENGTH) }')"
-	fi
-	if [[ -z "$dims" ]]; then
-		printf '1440x900'
-		return
-	fi
-	local host_w host_h
-	host_w="${dims%% x *}"
-	host_h="${dims##* x }"
-	if ((retina == 1)); then
-		host_w=$((host_w / 2))
-		host_h=$((host_h / 2))
-	fi
-	printf '%dx%d' "$((host_w * 4 / 5))" "$((host_h * 4 / 5))"
-}
-display="$(detect_display)"
+# Ship a small, universally-safe guest window (1024x768). Users can override
+# with VM_VPN_DISPLAY=WIDTHxHEIGHT at build time.
+display="${VM_VPN_DISPLAY:-1024x768}"
 printf 'build-image: guest display resolution: %s\n' "$display"
 
 cd "$REPO_ROOT"

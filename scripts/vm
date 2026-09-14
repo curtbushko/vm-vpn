@@ -550,13 +550,17 @@ seed_demo() {
 }
 
 build_image() {
+	local display="${1:-}"
 	[[ -x "$BUILD_SCRIPT" ]] || fail "build script is not executable: $BUILD_SCRIPT"
 	require_command tart
+	if [[ -n "$display" ]]; then
+		[[ "$display" =~ ^[0-9]+x[0-9]+$ ]] || fail "display must be WIDTHxHEIGHT, got: $display"
+	fi
 	if tart get "$BASE_VM_NAME" >/dev/null 2>&1; then
 		tart stop "$BASE_VM_NAME" >/dev/null 2>&1 || true
 		tart delete "$BASE_VM_NAME"
 	fi
-	"$BUILD_SCRIPT" "$BASE_VM_NAME"
+	VM_VPN_DISPLAY="$display" "$BUILD_SCRIPT" "$BASE_VM_NAME"
 	umask 077
 	install -d -m 0700 "$(dirname "$BASE_MARKER")"
 	printf 'verified:%s\n' "$BASE_IMAGE_VERSION" >"$BASE_MARKER"
@@ -647,8 +651,11 @@ main() {
 		setup_runtime
 		;;
 	image-build)
-		[[ $# -eq 1 ]] || fail "usage: task image:build"
-		build_image
+		case $# in
+		1) build_image "" ;;
+		2) build_image "$2" ;;
+		*) fail "usage: task image:build [-- WIDTHxHEIGHT]" ;;
+		esac
 		;;
 	image-status)
 		[[ $# -eq 1 ]] || fail "usage: task image:status"

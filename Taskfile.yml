@@ -187,9 +187,9 @@ tasks:
       - ./scripts/vm clean
 
   image:build:
-    desc: Build the internal shared runtime image directly.
+    desc: Build the internal shared runtime image. Optional WIDTHxHEIGHT sets the guest display (default 1024x768).
     cmds:
-      - ./scripts/vm image-build
+      - ./scripts/vm image-build {{.CLI_ARGS}}
 
   image:status:
     desc: Show Tart details for the internal shared runtime image.

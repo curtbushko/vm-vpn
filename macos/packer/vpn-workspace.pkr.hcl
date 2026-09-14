@@ -15,8 +15,8 @@ variable "vm_name" {
 
 variable "display" {
   type        = string
-  description = "Guest display resolution as WIDTHxHEIGHT; the build script sizes this to the host's main display."
-  default     = "1440x900"
+  description = "Guest display resolution as WIDTHxHEIGHT; override at build time via VM_VPN_DISPLAY."
+  default     = "1024x768"
 }
 
 source "tart-cli" "vpn_workspace" {
