@@ -94,6 +94,7 @@ sudo chmod 0644 "${FIREFOX_POLICY_FILE}"
 # Contents/Resources/vm-vpn.cfg) so Bitwarden's software token handles
 # WebAuthn for every profile, regardless of which one Firefox launches.
 readonly FIREFOX_RESOURCES="/Applications/Firefox.app/Contents/Resources"
+sudo install -d -m 0755 "${FIREFOX_RESOURCES}/defaults/pref"
 sudo tee "${FIREFOX_RESOURCES}/defaults/pref/autoconfig.js" >/dev/null <<'EOF'
 pref("general.config.filename", "vm-vpn.cfg");
 pref("general.config.obscure_value", 0);
