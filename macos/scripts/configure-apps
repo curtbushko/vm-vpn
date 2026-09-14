@@ -4,15 +4,23 @@ set -euo pipefail
 
 # The host passes its zoneinfo name (e.g. America/Toronto) as $1 so the
 # guest clock matches the host. Fall back to UTC when nothing is provided.
-# systemsetup silently no-ops under some macOS configurations, so also flip
-# the localtime symlink directly (which is what the OS actually reads) and
-# disable automatic timezone updates driven by Location Services.
+# /var/db/timezone/localtime is SIP-protected so ln cannot rewrite it; use
+# systemsetup's private XPC path and also export TZ for user shells so any
+# app started from Terminal or Ghostty always sees the correct zone even
+# when systemsetup silently no-ops under TCC.
 readonly GUEST_TIMEZONE="${1:-UTC}"
 readonly zoneinfo_path="/var/db/timezone/zoneinfo/${GUEST_TIMEZONE}"
 if [[ -f "$zoneinfo_path" ]]; then
 	sudo /usr/bin/defaults write /Library/Preferences/com.apple.timezone.auto Active -bool false
-	sudo /bin/ln -sfh "$zoneinfo_path" /var/db/timezone/localtime
-	sudo /usr/sbin/systemsetup -settimezone "$GUEST_TIMEZONE" >/dev/null 2>&1 || true
+	if ! sudo /usr/sbin/systemsetup -settimezone "$GUEST_TIMEZONE" >/dev/null; then
+		printf 'configure-apps: systemsetup could not persist the timezone; user shells will still use TZ=%s\n' "$GUEST_TIMEZONE" >&2
+	fi
+	install -d -m 0755 "${HOME}"
+	printf 'export TZ=%q\n' "$GUEST_TIMEZONE" >"${HOME}/.zshenv.vm-vpn-tz"
+	chmod 0644 "${HOME}/.zshenv.vm-vpn-tz"
+	if ! grep -Fq '.zshenv.vm-vpn-tz' "${HOME}/.zshenv" 2>/dev/null; then
+		printf '[ -f "$HOME/.zshenv.vm-vpn-tz" ] && . "$HOME/.zshenv.vm-vpn-tz"\n' >>"${HOME}/.zshenv"
+	fi
 	printf 'configure-apps: guest timezone set to %s\n' "$GUEST_TIMEZONE"
 else
 	printf 'configure-apps: unknown timezone %s; leaving guest unchanged\n' "$GUEST_TIMEZONE" >&2
