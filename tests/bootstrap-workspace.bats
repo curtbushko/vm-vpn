@@ -18,6 +18,7 @@ setup() {
 	export VM_VPN_SUDO="${BATS_TEST_TMPDIR}/bin/sudo"
 	export VM_VPN_SCUTIL="${BATS_TEST_TMPDIR}/bin/scutil"
 	export VM_VPN_HOSTS_FILE="${BATS_TEST_TMPDIR}/etc-hosts"
+	export VM_VPN_RESOLVER_DIR="${BATS_TEST_TMPDIR}/etc-resolver"
 	export SCUTIL_LOG="${BATS_TEST_TMPDIR}/scutil.log"
 	export PKILL_LOG="${BATS_TEST_TMPDIR}/pkill.log"
 	export APPEARANCE_LOG="${BATS_TEST_TMPDIR}/appearance.log"
@@ -260,6 +261,47 @@ EOF
 	run "${BOOTSTRAP_SCRIPT}"
 	[ "${status}" -ne 0 ]
 	printf '%s\n' "${output}" | grep -Fq 'hosts.json is malformed'
+}
+
+@test "runtime bootstrap installs per-domain resolvers from dns.json" {
+	printf '[]\n' >"${VM_VPN_WORKSPACE_ROOT}/bookmarks.json"
+	cat >"${VM_VPN_WORKSPACE_ROOT}/dns.json" <<'EOF'
+[
+  { "domain": "internal.example.com", "nameservers": ["10.0.0.53", "10.0.0.54"] },
+  { "domain": "corp.example",         "nameservers": ["10.0.1.1"] }
+]
+EOF
+
+	run "${BOOTSTRAP_SCRIPT}"
+	[ "${status}" -eq 0 ]
+	[ -f "${VM_VPN_RESOLVER_DIR}/internal.example.com" ]
+	grep -Fq 'nameserver 10.0.0.53' "${VM_VPN_RESOLVER_DIR}/internal.example.com"
+	grep -Fq 'nameserver 10.0.0.54' "${VM_VPN_RESOLVER_DIR}/internal.example.com"
+	[ -f "${VM_VPN_RESOLVER_DIR}/corp.example" ]
+	grep -Fq 'nameserver 10.0.1.1' "${VM_VPN_RESOLVER_DIR}/corp.example"
+
+	cat >"${VM_VPN_WORKSPACE_ROOT}/dns.json" <<'EOF'
+[ { "domain": "other.example", "nameservers": ["10.0.2.2"] } ]
+EOF
+	run "${BOOTSTRAP_SCRIPT}"
+	[ "${status}" -eq 0 ]
+	[ -f "${VM_VPN_RESOLVER_DIR}/other.example" ]
+	[ ! -f "${VM_VPN_RESOLVER_DIR}/internal.example.com" ]
+	[ ! -f "${VM_VPN_RESOLVER_DIR}/corp.example" ]
+
+	printf '[]\n' >"${VM_VPN_WORKSPACE_ROOT}/dns.json"
+	run "${BOOTSTRAP_SCRIPT}"
+	[ "${status}" -eq 0 ]
+	[ ! -f "${VM_VPN_RESOLVER_DIR}/other.example" ]
+}
+
+@test "runtime bootstrap rejects an invalid dns.json" {
+	printf '[]\n' >"${VM_VPN_WORKSPACE_ROOT}/bookmarks.json"
+	printf '[{"domain":"bad_domain","nameservers":["10.0.0.1"]}]\n' >"${VM_VPN_WORKSPACE_ROOT}/dns.json"
+
+	run "${BOOTSTRAP_SCRIPT}"
+	[ "${status}" -ne 0 ]
+	printf '%s\n' "${output}" | grep -Fq 'dns.json is malformed'
 }
 
 @test "runtime bootstrap replaces VPN and bookmark configuration between starts" {

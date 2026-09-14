@@ -153,6 +153,20 @@ EOF
 ]
 EOF
 	chmod 0600 "$config_path/hosts.json"
+	cat >"$config_path/dns.json" <<'EOF'
+[
+  // Uncomment and edit the entries below to install per-domain resolvers
+  // in the guest via /etc/resolver/<domain>. Each entry maps one search
+  // domain to the nameservers that should answer queries for it. The
+  // guest's default resolver is left alone so the AWS VPN Client can
+  // continue to update system DNS while the tunnel is up.
+  // {
+  //   "domain": "internal.example.com",
+  //   "nameservers": ["10.0.0.53"]
+  // }
+]
+EOF
+	chmod 0600 "$config_path/dns.json"
 }
 
 require_workspace() {
@@ -220,6 +234,35 @@ hosts_state() {
 		return 0
 	fi
 	if [[ "$(read_mounts_json "$hosts_file" | jq 'length')" -eq 0 ]]; then
+		printf 'none\n'
+		return 0
+	fi
+	printf 'valid\n'
+}
+
+dns_state() {
+	local config_path="$1"
+	local dns_file="${config_path}/dns.json"
+	if [[ ! -f "$dns_file" ]]; then
+		printf 'none\n'
+		return 0
+	fi
+	if ! read_mounts_json "$dns_file" | jq -e '
+	    type == "array"
+	    and all(.[];
+	      (.domain | type == "string")
+	      and (.domain | test("^[A-Za-z0-9]([A-Za-z0-9.-]*[A-Za-z0-9])?$"))
+	      and (.nameservers | type == "array")
+	      and ((.nameservers | length) > 0)
+	      and all(.nameservers[];
+	        type == "string"
+	        and test("^[A-Fa-f0-9:.]+$"))
+	    )
+	  ' >/dev/null 2>&1; then
+		printf 'invalid\n'
+		return 0
+	fi
+	if [[ "$(read_mounts_json "$dns_file" | jq 'length')" -eq 0 ]]; then
 		printf 'none\n'
 		return 0
 	fi
@@ -372,9 +415,11 @@ start_config() {
 	[[ "$bookmark_status" == "valid" ]] || fail "bookmarks are $bookmark_status; run: task validate -- $product $environment"
 	mounts_status="$(mounts_state "$config_path")"
 	[[ "$mounts_status" == "invalid" ]] && fail "mounts is invalid; fix: $config_path/mounts.json"
-	local hosts_status
+	local hosts_status dns_status
 	hosts_status="$(hosts_state "$config_path")"
 	[[ "$hosts_status" == "invalid" ]] && fail "hosts is invalid; fix: $config_path/hosts.json"
+	dns_status="$(dns_state "$config_path")"
+	[[ "$dns_status" == "invalid" ]] && fail "dns is invalid; fix: $config_path/dns.json"
 	vpn_count="$(vpn_profile_count "$config_path")"
 	printf 'config: %s/%s\nappearance: %s\nbookmarks: %s\nmounts: %s\nvpn profiles: %s\n' \
 		"$product" "$environment" "$appearance_status" "$bookmark_status" "$mounts_status" "$vpn_count"
@@ -488,17 +533,18 @@ delete_config() {
 validate_config() {
 	local product="$1"
 	local environment="$2"
-	local config_path bookmark_status vpn_status mounts_status hosts_status
+	local config_path bookmark_status vpn_status mounts_status hosts_status dns_status
 	config_path="$(require_workspace "$product" "$environment")"
 	bookmark_status="$(bookmarks_state "$config_path")"
 	vpn_status="$(vpn_state "$config_path")"
 	mounts_status="$(mounts_state "$config_path")"
 	hosts_status="$(hosts_state "$config_path")"
-	printf 'config: %s/%s\nbookmarks: %s\nvpn: %s\nmounts: %s\nhosts: %s\npath: %s\n' \
+	dns_status="$(dns_state "$config_path")"
+	printf 'config: %s/%s\nbookmarks: %s\nvpn: %s\nmounts: %s\nhosts: %s\ndns: %s\npath: %s\n' \
 		"$product" "$environment" "$bookmark_status" "$vpn_status" \
-		"$mounts_status" "$hosts_status" "$config_path"
+		"$mounts_status" "$hosts_status" "$dns_status" "$config_path"
 	[[ "$bookmark_status" == "valid" ]] && [[ "$mounts_status" != "invalid" ]] &&
-		[[ "$hosts_status" != "invalid" ]]
+		[[ "$hosts_status" != "invalid" ]] && [[ "$dns_status" != "invalid" ]]
 }
 
 status_config() {
