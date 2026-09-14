@@ -10,6 +10,10 @@ readonly MOUNTS_SOURCE="${WORKSPACE_ROOT}/mounts.json"
 readonly AWS_VPN_CLIENT="${VM_VPN_AWS_VPN_CLIENT:-/usr/local/bin/aws-vpn-client}"
 readonly BOOKMARKS_SOURCE="${WORKSPACE_ROOT}/bookmarks.json"
 readonly APPEARANCE_SOURCE="${WORKSPACE_ROOT}/appearance.json"
+readonly HOSTS_SOURCE="${WORKSPACE_ROOT}/hosts.json"
+readonly HOSTS_FILE="${VM_VPN_HOSTS_FILE:-/etc/hosts}"
+readonly HOSTS_BEGIN_MARKER='# BEGIN vm-vpn hosts'
+readonly HOSTS_END_MARKER='# END vm-vpn hosts'
 readonly FIREFOX_POLICY_FILE="${VM_VPN_FIREFOX_POLICY_FILE:-/Applications/Firefox.app/Contents/Resources/distribution/policies.json}"
 readonly STATE_ROOT="${VM_VPN_STATE_ROOT:-${HOME}/.local/state/vm-vpn}"
 readonly VPN_MANIFEST="${STATE_ROOT}/vpn-profiles"
@@ -119,6 +123,63 @@ if [[ -f "$VM_NAME_FILE" ]]; then
 		"$SUDO" -n "$SCUTIL" --set ComputerName "$desired_hostname"
 		printf '%s\n' "$hostname_checksum" >"${STATE_ROOT}/hostname.checksum"
 		chmod 0600 "${STATE_ROOT}/hostname.checksum"
+	fi
+fi
+
+if [[ -f "$HOSTS_SOURCE" ]]; then
+	if ! command -v jq >/dev/null 2>&1; then
+		printf 'bootstrap-workspace: jq is required\n' >&2
+		exit 1
+	fi
+	hosts_body="$(sed -E 's|^[[:space:]]*//.*$||' "$HOSTS_SOURCE" | jq -er '
+	    if type != "array"
+	      or (any(.[]; ((.ip | type) != "string")
+	        or ((.ip | test("^[A-Fa-f0-9:.]+$")) | not)
+	        or ((.hostnames | type) != "array")
+	        or ((.hostnames | length) == 0)
+	        or (any(.hostnames[]; (type != "string")
+	          or (test("^[A-Za-z0-9]([A-Za-z0-9._-]*[A-Za-z0-9])?$") | not)))))
+	    then
+	      error("bootstrap-workspace: hosts.json is malformed")
+	    else
+	      map("\(.ip) \(.hostnames | join(" "))") | join("\n")
+	    end
+	  ')" || {
+		printf 'bootstrap-workspace: hosts.json is malformed\n' >&2
+		exit 1
+	}
+	hosts_checksum="$(printf '%s' "$hosts_body" | shasum -a 256 | awk '{ print $1 }')"
+	if [[ ! -f "${STATE_ROOT}/hosts.checksum" ]] ||
+		[[ "$(<"${STATE_ROOT}/hosts.checksum")" != "$hosts_checksum" ]]; then
+		[[ -f "$HOSTS_FILE" ]] || {
+			printf 'bootstrap-workspace: %s is missing\n' "$HOSTS_FILE" >&2
+			exit 1
+		}
+		hosts_temp="$(mktemp "${STATE_ROOT}/hosts.XXXXXX")"
+		# Strip any prior vm-vpn block along with the blank separator that
+		# precedes it, so repeated rewrites do not stack blank lines.
+		awk -v begin="$HOSTS_BEGIN_MARKER" -v end="$HOSTS_END_MARKER" '
+		  BEGIN { buf = ""; skip = 0 }
+		  {
+		    if (skip) { if ($0 == end) skip = 0; next }
+		    if ($0 == begin) { skip = 1; buf = ""; next }
+		    if ($0 == "") { buf = buf $0 "\n"; next }
+		    printf "%s%s\n", buf, $0
+		    buf = ""
+		  }
+		' "$HOSTS_FILE" >"$hosts_temp"
+		if [[ -n "$hosts_body" ]]; then
+			{
+				printf '\n%s\n' "$HOSTS_BEGIN_MARKER"
+				printf '%s\n' "$hosts_body"
+				printf '%s\n' "$HOSTS_END_MARKER"
+			} >>"$hosts_temp"
+		fi
+		"$SUDO" -n /bin/cp "$hosts_temp" "$HOSTS_FILE"
+		"$SUDO" -n /bin/chmod 0644 "$HOSTS_FILE"
+		rm -f "$hosts_temp"
+		printf '%s\n' "$hosts_checksum" >"${STATE_ROOT}/hosts.checksum"
+		chmod 0600 "${STATE_ROOT}/hosts.checksum"
 	fi
 fi
 

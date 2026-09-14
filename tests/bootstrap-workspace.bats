@@ -17,6 +17,7 @@ setup() {
 	export VM_VPN_PKILL="${BATS_TEST_TMPDIR}/bin/pkill"
 	export VM_VPN_SUDO="${BATS_TEST_TMPDIR}/bin/sudo"
 	export VM_VPN_SCUTIL="${BATS_TEST_TMPDIR}/bin/scutil"
+	export VM_VPN_HOSTS_FILE="${BATS_TEST_TMPDIR}/etc-hosts"
 	export SCUTIL_LOG="${BATS_TEST_TMPDIR}/scutil.log"
 	export PKILL_LOG="${BATS_TEST_TMPDIR}/pkill.log"
 	export APPEARANCE_LOG="${BATS_TEST_TMPDIR}/appearance.log"
@@ -209,6 +210,56 @@ EOF
 	[ "${status}" -ne 0 ]
 	printf '%s\n' "${output}" | grep -Fq "refusing to replace existing path"
 	[ -f "${HOME}/code/keep.txt" ]
+}
+
+@test "runtime bootstrap writes hosts.json entries into /etc/hosts idempotently" {
+	printf '[]\n' >"${VM_VPN_WORKSPACE_ROOT}/bookmarks.json"
+	printf '127.0.0.1 localhost\n' >"${VM_VPN_HOSTS_FILE}"
+	cat >"${VM_VPN_WORKSPACE_ROOT}/hosts.json" <<'EOF'
+[
+  { "ip": "10.0.0.5", "hostnames": ["api.internal", "api"] },
+  { "ip": "10.0.0.6", "hostnames": ["db.internal"] }
+]
+EOF
+
+	run "${BOOTSTRAP_SCRIPT}"
+	[ "${status}" -eq 0 ]
+	grep -Fq '# BEGIN vm-vpn hosts' "${VM_VPN_HOSTS_FILE}"
+	grep -Fq '10.0.0.5 api.internal api' "${VM_VPN_HOSTS_FILE}"
+	grep -Fq '10.0.0.6 db.internal' "${VM_VPN_HOSTS_FILE}"
+	grep -Fq '# END vm-vpn hosts' "${VM_VPN_HOSTS_FILE}"
+	grep -Fq '127.0.0.1 localhost' "${VM_VPN_HOSTS_FILE}"
+
+	before_sum="$(shasum -a 256 "${VM_VPN_HOSTS_FILE}" | awk '{print $1}')"
+	run "${BOOTSTRAP_SCRIPT}"
+	[ "${status}" -eq 0 ]
+	[ "$(shasum -a 256 "${VM_VPN_HOSTS_FILE}" | awk '{print $1}')" = "$before_sum" ]
+
+	cat >"${VM_VPN_WORKSPACE_ROOT}/hosts.json" <<'EOF'
+[ { "ip": "10.0.0.7", "hostnames": ["cache.internal"] } ]
+EOF
+	run "${BOOTSTRAP_SCRIPT}"
+	[ "${status}" -eq 0 ]
+	grep -Fq '10.0.0.7 cache.internal' "${VM_VPN_HOSTS_FILE}"
+	run grep -Fq '10.0.0.5 api.internal api' "${VM_VPN_HOSTS_FILE}"
+	[ "${status}" -ne 0 ]
+
+	printf '[]\n' >"${VM_VPN_WORKSPACE_ROOT}/hosts.json"
+	run "${BOOTSTRAP_SCRIPT}"
+	[ "${status}" -eq 0 ]
+	run grep -Fq '# BEGIN vm-vpn hosts' "${VM_VPN_HOSTS_FILE}"
+	[ "${status}" -ne 0 ]
+	grep -Fq '127.0.0.1 localhost' "${VM_VPN_HOSTS_FILE}"
+}
+
+@test "runtime bootstrap rejects an invalid hosts.json" {
+	printf '[]\n' >"${VM_VPN_WORKSPACE_ROOT}/bookmarks.json"
+	printf '127.0.0.1 localhost\n' >"${VM_VPN_HOSTS_FILE}"
+	printf '[{"ip":"not-an-ip","hostnames":["ok"]}]\n' >"${VM_VPN_WORKSPACE_ROOT}/hosts.json"
+
+	run "${BOOTSTRAP_SCRIPT}"
+	[ "${status}" -ne 0 ]
+	printf '%s\n' "${output}" | grep -Fq 'hosts.json is malformed'
 }
 
 @test "runtime bootstrap replaces VPN and bookmark configuration between starts" {

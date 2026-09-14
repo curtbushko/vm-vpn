@@ -136,6 +136,23 @@ EOF
 ]
 EOF
 	chmod 0600 "$config_path/mounts.json"
+	cat >"$config_path/hosts.json" <<'EOF'
+[
+  // Uncomment and edit the entries below to add lines to the guest's
+  // /etc/hosts file. Each entry maps one IPv4 or IPv6 address to one or
+  // more hostnames. Entries are wrapped in a "# BEGIN vm-vpn hosts"
+  // block that is rewritten whenever this file changes.
+  // {
+  //   "ip": "10.0.0.5",
+  //   "hostnames": ["api.internal", "api"]
+  // },
+  // {
+  //   "ip": "10.0.0.6",
+  //   "hostnames": ["db.internal"]
+  // }
+]
+EOF
+	chmod 0600 "$config_path/hosts.json"
 }
 
 require_workspace() {
@@ -178,6 +195,35 @@ read_mounts_json() {
 	# commented out. Only whole-line comments are removed to avoid touching
 	# any // that appears inside a JSON string value.
 	sed -E 's|^[[:space:]]*//.*$||' "$1"
+}
+
+hosts_state() {
+	local config_path="$1"
+	local hosts_file="${config_path}/hosts.json"
+	if [[ ! -f "$hosts_file" ]]; then
+		printf 'none\n'
+		return 0
+	fi
+	if ! read_mounts_json "$hosts_file" | jq -e '
+	    type == "array"
+	    and all(.[];
+	      (.ip | type == "string")
+	      and (.ip | test("^[A-Fa-f0-9:.]+$"))
+	      and (.hostnames | type == "array")
+	      and ((.hostnames | length) > 0)
+	      and all(.hostnames[];
+	        type == "string"
+	        and test("^[A-Za-z0-9]([A-Za-z0-9._-]*[A-Za-z0-9])?$"))
+	    )
+	  ' >/dev/null 2>&1; then
+		printf 'invalid\n'
+		return 0
+	fi
+	if [[ "$(read_mounts_json "$hosts_file" | jq 'length')" -eq 0 ]]; then
+		printf 'none\n'
+		return 0
+	fi
+	printf 'valid\n'
 }
 
 mounts_state() {
@@ -326,6 +372,9 @@ start_config() {
 	[[ "$bookmark_status" == "valid" ]] || fail "bookmarks are $bookmark_status; run: task validate -- $product $environment"
 	mounts_status="$(mounts_state "$config_path")"
 	[[ "$mounts_status" == "invalid" ]] && fail "mounts is invalid; fix: $config_path/mounts.json"
+	local hosts_status
+	hosts_status="$(hosts_state "$config_path")"
+	[[ "$hosts_status" == "invalid" ]] && fail "hosts is invalid; fix: $config_path/hosts.json"
 	vpn_count="$(vpn_profile_count "$config_path")"
 	printf 'config: %s/%s\nappearance: %s\nbookmarks: %s\nmounts: %s\nvpn profiles: %s\n' \
 		"$product" "$environment" "$appearance_status" "$bookmark_status" "$mounts_status" "$vpn_count"
@@ -439,14 +488,17 @@ delete_config() {
 validate_config() {
 	local product="$1"
 	local environment="$2"
-	local config_path bookmark_status vpn_status mounts_status
+	local config_path bookmark_status vpn_status mounts_status hosts_status
 	config_path="$(require_workspace "$product" "$environment")"
 	bookmark_status="$(bookmarks_state "$config_path")"
 	vpn_status="$(vpn_state "$config_path")"
 	mounts_status="$(mounts_state "$config_path")"
-	printf 'config: %s/%s\nbookmarks: %s\nvpn: %s\nmounts: %s\npath: %s\n' \
-		"$product" "$environment" "$bookmark_status" "$vpn_status" "$mounts_status" "$config_path"
-	[[ "$bookmark_status" == "valid" ]] && [[ "$mounts_status" != "invalid" ]]
+	hosts_status="$(hosts_state "$config_path")"
+	printf 'config: %s/%s\nbookmarks: %s\nvpn: %s\nmounts: %s\nhosts: %s\npath: %s\n' \
+		"$product" "$environment" "$bookmark_status" "$vpn_status" \
+		"$mounts_status" "$hosts_status" "$config_path"
+	[[ "$bookmark_status" == "valid" ]] && [[ "$mounts_status" != "invalid" ]] &&
+		[[ "$hosts_status" != "invalid" ]]
 }
 
 status_config() {
