@@ -49,16 +49,15 @@ tasks:
           '                Both accept lowercase letters, numbers, and internal hyphens.' \
           '' \
           'SETUP AND MAINTENANCE' \
-          '  task setup                        Build the shared runtime image when it is missing.' \
-          '  task seed -- demo dev             Copy tracked fake files into the demo/dev config.' \
-          '  task clean                        Permanently delete orphaned hidden runtimes.' \
-          '  task image:build [-- WIDTHxHEIGHT]' \
-          '                                    Build the internal runtime image directly. Optional' \
-          '                                    WIDTHxHEIGHT sets the guest display (default 1024x768).' \
-          '  task image:status                 Diagnose the internal runtime image.' \
-          '  task doctor                       Verify development-shell tools.' \
-          '  task check                        Run all project quality gates.' \
-          '  task help                         Show this guide; also the default task.' \
+          '  task setup                Build the shared runtime image when it is missing.' \
+          '  task seed -- demo dev     Copy tracked fake files into the demo/dev config.' \
+          '  task clean                Permanently delete orphaned hidden runtimes.' \
+          '  task image:build [-- WxH] Build the runtime image; WxH e.g. 1280x800' \
+          '                            sets guest display (default 1024x768).' \
+          '  task image:status         Diagnose the internal runtime image.' \
+          '  task doctor               Verify development-shell tools.' \
+          '  task check                Run all project quality gates.' \
+          '  task help                 Show this guide; also the default task.' \
           '' \
           'Examples:' \
           '  task list' \
@@ -188,7 +187,7 @@ tasks:
       - ./scripts/vm clean
 
   image:build:
-    desc: Build the internal shared runtime image. Optional WIDTHxHEIGHT sets the guest display (default 1024x768).
+    desc: 'Build the internal shared runtime image. Optional WxH (e.g. 1280x800) sets the guest display; default 1024x768.'
     cmds:
       - ./scripts/vm image-build {{.CLI_ARGS}}
 
