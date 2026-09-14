@@ -49,15 +49,16 @@ tasks:
           '                Both accept lowercase letters, numbers, and internal hyphens.' \
           '' \
           'SETUP AND MAINTENANCE' \
-          '  task setup          Build the shared runtime image when it is missing.' \
-          '  task seed -- demo dev' \
-          '                      Copy tracked fake files into the demo/dev config.' \
-          '  task clean          Permanently delete orphaned hidden runtimes.' \
-          '  task image:build    Build the internal runtime image directly.' \
-          '  task image:status   Diagnose the internal runtime image.' \
-          '  task doctor         Verify development-shell tools.' \
-          '  task check          Run all project quality gates.' \
-          '  task help           Show this guide; also the default task.' \
+          '  task setup                        Build the shared runtime image when it is missing.' \
+          '  task seed -- demo dev             Copy tracked fake files into the demo/dev config.' \
+          '  task clean                        Permanently delete orphaned hidden runtimes.' \
+          '  task image:build [-- WIDTHxHEIGHT]' \
+          '                                    Build the internal runtime image directly. Optional' \
+          '                                    WIDTHxHEIGHT sets the guest display (default 1024x768).' \
+          '  task image:status                 Diagnose the internal runtime image.' \
+          '  task doctor                       Verify development-shell tools.' \
+          '  task check                        Run all project quality gates.' \
+          '  task help                         Show this guide; also the default task.' \
           '' \
           'Examples:' \
           '  task list' \
