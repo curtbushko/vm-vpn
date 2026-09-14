@@ -32,6 +32,25 @@ if ! tart exec -i "$VM_NAME" /bin/bash -c \
 	exit 1
 fi
 
+# Read the host's zoneinfo name (e.g. America/Toronto) so the guest can match
+# it. readlink of /etc/localtime resolves to /var/db/timezone/zoneinfo/<name>
+# on modern macOS; strip the prefix down to <name>.
+host_timezone="${VM_VPN_TIMEZONE:-}"
+if [[ -z "$host_timezone" ]] && [[ -L /etc/localtime ]]; then
+	host_timezone="$(readlink /etc/localtime)"
+	host_timezone="${host_timezone#*zoneinfo/}"
+fi
+host_timezone="${host_timezone:-UTC}"
+readonly host_timezone
+
 for guest_script in install-apps configure-apps seal-image cleanup-apps verify-image; do
-	tart exec -i "$VM_NAME" /bin/bash -s <"${SCRIPT_DIR}/${guest_script}"
+	case "$guest_script" in
+		configure-apps)
+			tart exec -i "$VM_NAME" /bin/bash -s -- "$host_timezone" \
+				<"${SCRIPT_DIR}/${guest_script}"
+			;;
+		*)
+			tart exec -i "$VM_NAME" /bin/bash -s <"${SCRIPT_DIR}/${guest_script}"
+			;;
+	esac
 done

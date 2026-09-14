@@ -128,6 +128,14 @@ setup() {
 	[ "${status}" -ne 0 ]
 }
 
+@test "macOS provisioning passes the host timezone to configure-apps" {
+	grep -Fq 'readlink /etc/localtime' "${REPO_ROOT}/macos/scripts/provision-vm"
+	grep -Fq 'VM_VPN_TIMEZONE' "${REPO_ROOT}/macos/scripts/provision-vm"
+	grep -Fq 'bash -s -- "$host_timezone"' "${REPO_ROOT}/macos/scripts/provision-vm"
+	grep -Fq 'systemsetup -settimezone' "${CONFIGURE_SCRIPT}"
+	grep -Fq 'GUEST_TIMEZONE="${1:-UTC}"' "${CONFIGURE_SCRIPT}"
+}
+
 @test "macOS applications receive workspace defaults" {
 	grep -Fq '/Applications/Firefox.app/Contents/Resources/distribution' "${CONFIGURE_SCRIPT}"
 	grep -Fq 'sudo chown "$(id -u):$(id -g)" "$FIREFOX_POLICY_DIR"' "${CONFIGURE_SCRIPT}"

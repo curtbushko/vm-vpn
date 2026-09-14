@@ -2,6 +2,15 @@
 
 set -euo pipefail
 
+# The host passes its zoneinfo name (e.g. America/Toronto) as $1 so the
+# guest clock matches the host. Fall back to UTC when nothing is provided.
+readonly GUEST_TIMEZONE="${1:-UTC}"
+if [[ -f "/usr/share/zoneinfo/${GUEST_TIMEZONE}" ]]; then
+	sudo /usr/sbin/systemsetup -settimezone "$GUEST_TIMEZONE" >/dev/null
+else
+	printf 'configure-apps: unknown timezone %s; leaving guest unchanged\n' "$GUEST_TIMEZONE" >&2
+fi
+
 readonly FIREFOX_POLICY_DIR="/Applications/Firefox.app/Contents/Resources/distribution"
 readonly FIREFOX_POLICY_FILE="${FIREFOX_POLICY_DIR}/policies.json"
 readonly LAUNCH_AGENT="${HOME}/Library/LaunchAgents/com.vm-vpn.bootstrap.plist"
