@@ -38,6 +38,10 @@ if [[ ! -x "${HOME}/.local/bin/vm-vpn-bootstrap" ]]; then
 	exit 1
 fi
 
+# Use traditional (non-natural) scroll direction so a physical wheel mouse
+# scrolls the way most users expect on a workstation.
+defaults write -g com.apple.swipescrolldirection -bool false
+
 install -d -m 0700 "${HOME}/.config/ghostty"
 cat >"${HOME}/.config/ghostty/config" <<'EOF'
 theme = dark:Catppuccin Mocha,light:Catppuccin Latte

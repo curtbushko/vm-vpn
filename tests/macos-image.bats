@@ -179,6 +179,7 @@ setup() {
 	grep -Fq '"sidebar.revamp":' "${CONFIGURE_SCRIPT}"
 	grep -Fq '"sidebar.verticalTabs":' "${CONFIGURE_SCRIPT}"
 	grep -Fq '"SkipOnboarding": true' "${CONFIGURE_SCRIPT}"
+	grep -Fq 'com.apple.swipescrolldirection -bool false' "${CONFIGURE_SCRIPT}"
 	grep -Fq 'lockPref("security.webauth.webauthn_enable_softtoken", true);' "${CONFIGURE_SCRIPT}"
 	grep -Fq 'lockPref("security.webauthn.enable_macos_passkeys", false);' "${CONFIGURE_SCRIPT}"
 	grep -Fq 'defaults/pref/autoconfig.js' "${CONFIGURE_SCRIPT}"
