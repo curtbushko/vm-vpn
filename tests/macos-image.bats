@@ -180,9 +180,6 @@ setup() {
 	grep -Fq '"sidebar.verticalTabs":' "${CONFIGURE_SCRIPT}"
 	grep -Fq '"SkipOnboarding": true' "${CONFIGURE_SCRIPT}"
 	grep -Fq 'com.apple.swipescrolldirection -bool false' "${CONFIGURE_SCRIPT}"
-	grep -Fq 'open -a "AWS VPN Client"' "${CONFIGURE_SCRIPT}"
-	grep -Fq 'tell application "AWS VPN Client" to quit' "${CONFIGURE_SCRIPT}"
-	grep -Fq 'AWS VPN Client Helper' "${CONFIGURE_SCRIPT}"
 	grep -Fq 'lockPref("security.webauth.webauthn_enable_softtoken", true);' "${CONFIGURE_SCRIPT}"
 	grep -Fq 'lockPref("security.webauthn.enable_macos_passkeys", false);' "${CONFIGURE_SCRIPT}"
 	grep -Fq 'defaults/pref/autoconfig.js' "${CONFIGURE_SCRIPT}"
@@ -291,7 +288,6 @@ setup() {
 	grep -Fq 'AutomaticallyInstallMacOSUpdates' "${seal_script}"
 	grep -Fq 'log erase --all' "${seal_script}"
 	grep -Fq 'qlmanage -r cache' "${seal_script}"
-	grep -Fq 'networksetup -setdnsservers Ethernet 1.1.1.1 1.0.0.1' "${seal_script}"
 	run grep -F 'atsutil databases -removeUser' "${seal_script}"
 	[ "${status}" -ne 0 ]
 }

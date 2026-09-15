@@ -14,8 +14,6 @@ readonly HOSTS_SOURCE="${WORKSPACE_ROOT}/hosts.json"
 readonly HOSTS_FILE="${VM_VPN_HOSTS_FILE:-/etc/hosts}"
 readonly HOSTS_BEGIN_MARKER='# BEGIN vm-vpn hosts'
 readonly HOSTS_END_MARKER='# END vm-vpn hosts'
-readonly DNS_SOURCE="${WORKSPACE_ROOT}/dns.json"
-readonly RESOLVER_DIR="${VM_VPN_RESOLVER_DIR:-/etc/resolver}"
 readonly FIREFOX_POLICY_FILE="${VM_VPN_FIREFOX_POLICY_FILE:-/Applications/Firefox.app/Contents/Resources/distribution/policies.json}"
 readonly STATE_ROOT="${VM_VPN_STATE_ROOT:-${HOME}/.local/state/vm-vpn}"
 readonly VPN_MANIFEST="${STATE_ROOT}/vpn-profiles"
@@ -182,64 +180,6 @@ if [[ -f "$HOSTS_SOURCE" ]]; then
 		rm -f "$hosts_temp"
 		printf '%s\n' "$hosts_checksum" >"${STATE_ROOT}/hosts.checksum"
 		chmod 0600 "${STATE_ROOT}/hosts.checksum"
-	fi
-fi
-
-if [[ -f "$DNS_SOURCE" ]]; then
-	if ! command -v jq >/dev/null 2>&1; then
-		printf 'bootstrap-workspace: jq is required\n' >&2
-		exit 1
-	fi
-	dns_entries="$(sed -E 's|^[[:space:]]*//.*$||' "$DNS_SOURCE" | jq -er '
-	    if type != "array"
-	      or (any(.[]; ((.domain | type) != "string")
-	        or ((.domain | test("^[A-Za-z0-9]([A-Za-z0-9.-]*[A-Za-z0-9])?$")) | not)
-	        or ((.nameservers | type) != "array")
-	        or ((.nameservers | length) == 0)
-	        or (any(.nameservers[]; (type != "string")
-	          or (test("^[A-Fa-f0-9:.]+$") | not)))))
-	    then
-	      error("bootstrap-workspace: dns.json is malformed")
-	    else
-	      map("\(.domain)\t\(.nameservers | join(","))") | join("\n")
-	    end
-	  ')" || {
-		printf 'bootstrap-workspace: dns.json is malformed\n' >&2
-		exit 1
-	}
-	dns_checksum="$(printf '%s' "$dns_entries" | shasum -a 256 | awk '{ print $1 }')"
-	if [[ ! -f "${STATE_ROOT}/dns.checksum" ]] ||
-		[[ "$(<"${STATE_ROOT}/dns.checksum")" != "$dns_checksum" ]]; then
-		"$SUDO" -n /bin/mkdir -p "$RESOLVER_DIR"
-		# Remove any resolver files we installed on a previous run so a removed
-		# entry cleans up. The manifest is the set of domains we own.
-		if [[ -f "${STATE_ROOT}/dns.manifest" ]]; then
-			while IFS= read -r prior_domain; do
-				[[ -n "$prior_domain" ]] || continue
-				"$SUDO" -n /bin/rm -f "${RESOLVER_DIR}/${prior_domain}"
-			done <"${STATE_ROOT}/dns.manifest"
-		fi
-		: >"${STATE_ROOT}/dns.manifest"
-		chmod 0600 "${STATE_ROOT}/dns.manifest"
-		if [[ -n "$dns_entries" ]]; then
-			while IFS=$'\t' read -r dns_domain dns_servers; do
-				[[ -n "$dns_domain" ]] || continue
-				resolver_temp="$(mktemp "${STATE_ROOT}/resolver.XXXXXX")"
-				{
-					printf '# Managed by vm-vpn bootstrap; edits will be overwritten.\n'
-					IFS=',' read -r -a dns_server_list <<<"$dns_servers"
-					for dns_server in "${dns_server_list[@]}"; do
-						printf 'nameserver %s\n' "$dns_server"
-					done
-				} >"$resolver_temp"
-				"$SUDO" -n /bin/cp "$resolver_temp" "${RESOLVER_DIR}/${dns_domain}"
-				"$SUDO" -n /bin/chmod 0644 "${RESOLVER_DIR}/${dns_domain}"
-				rm -f "$resolver_temp"
-				printf '%s\n' "$dns_domain" >>"${STATE_ROOT}/dns.manifest"
-			done <<<"$dns_entries"
-		fi
-		printf '%s\n' "$dns_checksum" >"${STATE_ROOT}/dns.checksum"
-		chmod 0600 "${STATE_ROOT}/dns.checksum"
 	fi
 fi
 

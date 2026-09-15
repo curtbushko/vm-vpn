@@ -142,22 +142,6 @@ defaults write com.apple.LaunchServices/com.apple.launchservices.secure LSHandle
 	'{ LSHandlerContentType = public.html; LSHandlerRoleAll = org.mozilla.firefox; }' \
 	'{ LSHandlerContentType = public.xhtml; LSHandlerRoleAll = org.mozilla.firefox; }'
 
-# AWS VPN Client 6.0.x uses SMAppService: a helper app bundled at
-# Contents/Frameworks/AWS VPN Client Helper.app that the main client registers
-# on first launch via SMAppService.register(). Without that registration the
-# tunnel opens but the client cannot push DNS via SystemConfiguration, so
-# internal names never resolve. There is no privileged prompt to trigger, so
-# just launch the client once here to force registration, then quit it so the
-# rest of the build proceeds. The launch is best-effort; a missing app bundle
-# or a headless build session is not fatal.
-if [[ -d "/Applications/AWS VPN Client/AWS VPN Client.app/Contents/Frameworks/AWS VPN Client Helper.app" ]]; then
-	open -a "AWS VPN Client" >/dev/null 2>&1 || true
-	sleep 5
-	osascript -e 'tell application "AWS VPN Client" to quit' >/dev/null 2>&1 || true
-	sleep 2
-	pkill -x "AWS VPN Client" >/dev/null 2>&1 || true
-fi
-
 install -d -m 0700 "${HOME}/.config/AWSVPNClient/OpenVpnConfigs" "${HOME}/Library/LaunchAgents" "${HOME}/Library/Logs"
 cat >"$LAUNCH_AGENT" <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
