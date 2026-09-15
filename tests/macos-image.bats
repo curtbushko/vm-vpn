@@ -155,8 +155,12 @@ setup() {
 	run grep -F 'vim.opt.background' "${CONFIGURE_SCRIPT}"
 	[ "${status}" -ne 0 ]
 	grep -Fq 'DisplayBookmarksToolbar' "${CONFIGURE_SCRIPT}"
-	grep -Fq 'bitwarden-password-manager' "${CONFIGURE_SCRIPT}"
-	grep -Fq '1password-x-password-manager' "${CONFIGURE_SCRIPT}"
+	grep -Fq '446900e4-71c2-419f-a6a7-df9c091e268b' "${CONFIGURE_SCRIPT}"
+	grep -Fq 'd634138d-c276-4fc8-924b-40a0ea21d284' "${CONFIGURE_SCRIPT}"
+	grep -Fq 'file:///Applications/Firefox.app/Contents/Resources/distribution/extensions/' "${CONFIGURE_SCRIPT}"
+	grep -Fq 'bitwarden-password-manager/latest.xpi' "${INSTALL_SCRIPT}"
+	grep -Fq '1password-x-password-manager/latest.xpi' "${INSTALL_SCRIPT}"
+	grep -Fq '/Applications/Firefox.app/Contents/Resources/distribution/extensions' "${INSTALL_SCRIPT}"
 	[ "$(grep -Fc '"default_area": "navbar"' "${CONFIGURE_SCRIPT}")" -eq 2 ]
 	grep -Fq 'tart-guest-agent --run-agent' "${CONFIGURE_SCRIPT}"
 	grep -Fq 'AppleLanguages' "${CONFIGURE_SCRIPT}"

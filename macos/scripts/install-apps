@@ -39,3 +39,18 @@ done
 brew install jq
 brew install dockutil
 brew install openai/tools/tart-guest-agent
+
+# Bake the Firefox force-installed extensions into the image so first-launch
+# resolution does not need addons.mozilla.org (the runtime guest may have no
+# usable DNS until the VPN pushes its own resolvers). configure-apps writes a
+# policies.json that references these local paths via file:// install_url.
+readonly FIREFOX_EXT_DIR="/Applications/Firefox.app/Contents/Resources/distribution/extensions"
+sudo /bin/mkdir -p "$FIREFOX_EXT_DIR"
+sudo /usr/sbin/chown "$(id -u):$(id -g)" "$FIREFOX_EXT_DIR"
+/usr/bin/curl -fsSL \
+	-o "${FIREFOX_EXT_DIR}/{446900e4-71c2-419f-a6a7-df9c091e268b}.xpi" \
+	https://addons.mozilla.org/firefox/downloads/latest/bitwarden-password-manager/latest.xpi
+/usr/bin/curl -fsSL \
+	-o "${FIREFOX_EXT_DIR}/{d634138d-c276-4fc8-924b-40a0ea21d284}.xpi" \
+	https://addons.mozilla.org/firefox/downloads/latest/1password-x-password-manager/latest.xpi
+chmod 0644 "${FIREFOX_EXT_DIR}"/*.xpi
