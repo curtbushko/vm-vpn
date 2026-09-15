@@ -142,48 +142,20 @@ defaults write com.apple.LaunchServices/com.apple.launchservices.secure LSHandle
 	'{ LSHandlerContentType = public.html; LSHandlerRoleAll = org.mozilla.firefox; }' \
 	'{ LSHandlerContentType = public.xhtml; LSHandlerRoleAll = org.mozilla.firefox; }'
 
-# Install the AWS VPN Client's privileged helper by hand. On a normal Mac the
-# client's first launch triggers an SMJobBless authorization prompt that
-# copies com.amazonaws.acvc.helper into /Library/PrivilegedHelperTools and
-# writes its launch daemon plist; that prompt never appears inside our
-# non-interactive build, so without this the tunnel opens but the client
-# cannot push DNS via SystemConfiguration and internal names never resolve.
-readonly ACVC_HELPER_SRC="/Applications/AWS VPN Client/AWS VPN Client.app/Contents/Resources/AWS VPN Client/Contents/Library/LaunchServices/com.amazonaws.acvc.helper"
-readonly ACVC_HELPER_DST="/Library/PrivilegedHelperTools/com.amazonaws.acvc.helper"
-readonly ACVC_HELPER_PLIST="/Library/LaunchDaemons/com.amazonaws.acvc.helper.plist"
-if [[ ! -f "$ACVC_HELPER_SRC" ]]; then
-	printf 'configure-apps: AWS VPN Client helper not found at %s; skipping install (client 6.0+ may use SMAppService instead)\n' "$ACVC_HELPER_SRC" >&2
-else
-	sudo /usr/bin/install -d -o root -g wheel -m 0755 /Library/PrivilegedHelperTools /var/log/AWSVPNClient
-	sudo /usr/bin/install -o root -g wheel -m 0755 "$ACVC_HELPER_SRC" "$ACVC_HELPER_DST"
-	sudo tee "$ACVC_HELPER_PLIST" >/dev/null <<'EOF'
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-    <key>Label</key>
-    <string>com.amazonaws.acvc.helper</string>
-    <key>MachServices</key>
-    <dict>
-        <key>com.amazonaws.acvc.helper</key>
-        <true/>
-    </dict>
-    <key>Program</key>
-    <string>/Library/PrivilegedHelperTools/com.amazonaws.acvc.helper</string>
-    <key>ProgramArguments</key>
-    <array>
-        <string>/Library/PrivilegedHelperTools/com.amazonaws.acvc.helper</string>
-    </array>
-    <key>StandardErrorPath</key>
-    <string>/var/log/AWSVPNClient/AcvcHelperErrLog.txt</string>
-    <key>StandardOutPath</key>
-    <string>/var/log/AWSVPNClient/AcvcHelperOutLog.txt</string>
-</dict>
-</plist>
-EOF
-	sudo /bin/chmod 0644 "$ACVC_HELPER_PLIST"
-	sudo /usr/sbin/chown root:wheel "$ACVC_HELPER_PLIST"
-	sudo /bin/launchctl bootstrap system "$ACVC_HELPER_PLIST" 2>/dev/null || true
+# AWS VPN Client 6.0.x uses SMAppService: a helper app bundled at
+# Contents/Frameworks/AWS VPN Client Helper.app that the main client registers
+# on first launch via SMAppService.register(). Without that registration the
+# tunnel opens but the client cannot push DNS via SystemConfiguration, so
+# internal names never resolve. There is no privileged prompt to trigger, so
+# just launch the client once here to force registration, then quit it so the
+# rest of the build proceeds. The launch is best-effort; a missing app bundle
+# or a headless build session is not fatal.
+if [[ -d "/Applications/AWS VPN Client/AWS VPN Client.app/Contents/Frameworks/AWS VPN Client Helper.app" ]]; then
+	open -a "AWS VPN Client" >/dev/null 2>&1 || true
+	sleep 5
+	osascript -e 'tell application "AWS VPN Client" to quit' >/dev/null 2>&1 || true
+	sleep 2
+	pkill -x "AWS VPN Client" >/dev/null 2>&1 || true
 fi
 
 install -d -m 0700 "${HOME}/.config/AWSVPNClient/OpenVpnConfigs" "${HOME}/Library/LaunchAgents" "${HOME}/Library/Logs"
