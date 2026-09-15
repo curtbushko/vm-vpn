@@ -151,9 +151,12 @@ defaults write com.apple.LaunchServices/com.apple.launchservices.secure LSHandle
 readonly ACVC_HELPER_SRC="/Applications/AWS VPN Client/AWS VPN Client.app/Contents/Resources/AWS VPN Client/Contents/Library/LaunchServices/com.amazonaws.acvc.helper"
 readonly ACVC_HELPER_DST="/Library/PrivilegedHelperTools/com.amazonaws.acvc.helper"
 readonly ACVC_HELPER_PLIST="/Library/LaunchDaemons/com.amazonaws.acvc.helper.plist"
-sudo /usr/bin/install -d -o root -g wheel -m 0755 /Library/PrivilegedHelperTools /var/log/AWSVPNClient
-sudo /usr/bin/install -o root -g wheel -m 0755 "$ACVC_HELPER_SRC" "$ACVC_HELPER_DST"
-sudo tee "$ACVC_HELPER_PLIST" >/dev/null <<'EOF'
+if [[ ! -f "$ACVC_HELPER_SRC" ]]; then
+	printf 'configure-apps: AWS VPN Client helper not found at %s; skipping install (client 6.0+ may use SMAppService instead)\n' "$ACVC_HELPER_SRC" >&2
+else
+	sudo /usr/bin/install -d -o root -g wheel -m 0755 /Library/PrivilegedHelperTools /var/log/AWSVPNClient
+	sudo /usr/bin/install -o root -g wheel -m 0755 "$ACVC_HELPER_SRC" "$ACVC_HELPER_DST"
+	sudo tee "$ACVC_HELPER_PLIST" >/dev/null <<'EOF'
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -178,9 +181,10 @@ sudo tee "$ACVC_HELPER_PLIST" >/dev/null <<'EOF'
 </dict>
 </plist>
 EOF
-sudo /bin/chmod 0644 "$ACVC_HELPER_PLIST"
-sudo /usr/sbin/chown root:wheel "$ACVC_HELPER_PLIST"
-sudo /bin/launchctl bootstrap system "$ACVC_HELPER_PLIST" 2>/dev/null || true
+	sudo /bin/chmod 0644 "$ACVC_HELPER_PLIST"
+	sudo /usr/sbin/chown root:wheel "$ACVC_HELPER_PLIST"
+	sudo /bin/launchctl bootstrap system "$ACVC_HELPER_PLIST" 2>/dev/null || true
+fi
 
 install -d -m 0700 "${HOME}/.config/AWSVPNClient/OpenVpnConfigs" "${HOME}/Library/LaunchAgents" "${HOME}/Library/Logs"
 cat >"$LAUNCH_AGENT" <<EOF
