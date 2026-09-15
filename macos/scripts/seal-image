@@ -168,10 +168,14 @@ for background_service in "${system_background_services[@]}"; do
 	sudo launchctl kill SIGTERM "system/${background_service}" 2>/dev/null || true
 done
 
-# Clear the build-time DNS pin so the runtime interface uses DHCP. Without this
-# the AWS VPN Client cannot install its own resolvers, and internal hostnames
-# stay unresolvable inside the guest even while the tunnel is up.
-sudo /usr/sbin/networksetup -setdnsservers Ethernet empty
+# Pin a public resolver on the primary interface so the guest has working DNS
+# on first boot; tart's built-in DHCP does not advertise resolvers, so an empty
+# list leaves the guest without name resolution. AWS VPN Client still installs
+# its own supplemental resolvers via SystemConfiguration when the OVPN profile
+# pushes dhcp-option DNS/DOMAIN, and any /etc/resolver/<domain> files from
+# dns.json win for their own domains, so this pin does not block internal
+# name resolution over the tunnel.
+sudo /usr/sbin/networksetup -setdnsservers Ethernet 1.1.1.1 1.0.0.1
 
 # Use supported maintenance tools to clear generated indexes, font/Quick Look
 # caches, logs, and periodic temporary state without modifying the signed system

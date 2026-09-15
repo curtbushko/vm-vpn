@@ -287,7 +287,7 @@ setup() {
 	grep -Fq 'AutomaticallyInstallMacOSUpdates' "${seal_script}"
 	grep -Fq 'log erase --all' "${seal_script}"
 	grep -Fq 'qlmanage -r cache' "${seal_script}"
-	grep -Fq 'networksetup -setdnsservers Ethernet empty' "${seal_script}"
+	grep -Fq 'networksetup -setdnsservers Ethernet 1.1.1.1 1.0.0.1' "${seal_script}"
 	run grep -F 'atsutil databases -removeUser' "${seal_script}"
 	[ "${status}" -ne 0 ]
 }
