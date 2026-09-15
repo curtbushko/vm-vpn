@@ -43,14 +43,25 @@ fi
 host_timezone="${host_timezone:-UTC}"
 readonly host_timezone
 
+# Stage each guest script to a file on the VM before executing it, so bash
+# reads its commands from disk instead of stdin. Homebrew subprocesses (for
+# example openai/tools/tart-guest-agent's Tier 2 confirmation) otherwise read
+# from stdin and silently consume the remainder of the piped script, dropping
+# every command that follows the brew call.
 for guest_script in install-apps configure-apps seal-image cleanup-apps verify-image; do
+	remote_path="/tmp/vm-vpn-${guest_script}.sh"
+	if ! tart exec -i "$VM_NAME" /bin/bash -c \
+		"/usr/bin/tee \"${remote_path}\" >/dev/null && chmod 0755 \"${remote_path}\"" \
+		<"${SCRIPT_DIR}/${guest_script}"; then
+		printf 'provision-vm: failed to stage %s on the guest\n' "$guest_script" >&2
+		exit 1
+	fi
 	case "$guest_script" in
 		configure-apps)
-			tart exec -i "$VM_NAME" /bin/bash -s -- "$host_timezone" \
-				<"${SCRIPT_DIR}/${guest_script}"
+			tart exec "$VM_NAME" /bin/bash "$remote_path" "$host_timezone"
 			;;
 		*)
-			tart exec -i "$VM_NAME" /bin/bash -s <"${SCRIPT_DIR}/${guest_script}"
+			tart exec "$VM_NAME" /bin/bash "$remote_path"
 			;;
 	esac
 done
