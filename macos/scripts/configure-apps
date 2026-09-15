@@ -29,17 +29,45 @@ fi
 # Replicate the supplemental resolver that AWS VPN Client 6.x installs at
 # connect time on hosts where the machinery is fully approved. In a fresh
 # Packer image the daemon runs in a reduced mode and never touches configd,
-# so private lookups never route through the VPC resolver. A static
-# /etc/resolver/openvpn file gives macOS the same scoped resolver — routes
-# names in the "openvpn" search domain to 10.0.0.2 (the VPC default DNS,
-# reachable through the tunnel's 10.0.0.0/16 route) and does nothing when
-# the tunnel is down. Ethernet gains "openvpn" as a search suffix so bare
-# hostnames get the same treatment as on the host.
-sudo install -d -m 0755 /etc/resolver
-sudo tee /etc/resolver/openvpn >/dev/null <<'EOF'
-nameserver 10.0.0.2
+# so private lookups never route through the VPC resolver.
+#
+# /etc/resolver/<domain> files register on this macOS without the
+# "Supplemental" flag, so mDNSResponder never consults them for scoped
+# queries. Writing the resolver into configd's dynamic store via scutil
+# produces the correctly-flagged Supplemental resolver, which is exactly
+# what the AWS VPN Client does on a working host. State: keys are
+# ephemeral, so a LaunchDaemon reinstalls the entry at every boot.
+readonly DNS_INSTALLER=/usr/local/sbin/vm-vpn-install-dns-scope
+readonly DNS_LAUNCH_DAEMON=/Library/LaunchDaemons/com.vm-vpn.dns-scope.plist
+sudo install -d -m 0755 /usr/local/sbin
+sudo tee "$DNS_INSTALLER" >/dev/null <<'EOF'
+#!/bin/bash
+set -euo pipefail
+/usr/sbin/scutil <<SCUTIL
+d.init
+d.add ServerAddresses * 10.0.0.2
+d.add SupplementalMatchDomains * openvpn
+set State:/Network/Service/com.vm-vpn.openvpn/DNS
+quit
+SCUTIL
 EOF
-sudo chmod 0644 /etc/resolver/openvpn
+sudo chmod 0755 "$DNS_INSTALLER"
+sudo tee "$DNS_LAUNCH_DAEMON" >/dev/null <<EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>com.vm-vpn.dns-scope</string>
+  <key>ProgramArguments</key>
+  <array><string>${DNS_INSTALLER}</string></array>
+  <key>RunAtLoad</key><true/>
+</dict>
+</plist>
+EOF
+sudo chown root:wheel "$DNS_LAUNCH_DAEMON"
+sudo chmod 0644 "$DNS_LAUNCH_DAEMON"
+# Ethernet gains "openvpn" as a search suffix so bare hostnames get the
+# same treatment they would on the host.
 sudo /usr/sbin/networksetup -setsearchdomains Ethernet openvpn
 
 readonly FIREFOX_POLICY_DIR="/Applications/Firefox.app/Contents/Resources/distribution"
