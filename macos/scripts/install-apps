@@ -52,3 +52,9 @@ sudo /usr/sbin/chown "$(id -u):$(id -g)" "$FIREFOX_EXT_DIR"
 	-o "${FIREFOX_EXT_DIR}/{d634138d-c276-4fc8-924b-40a0ea21d284}.xpi" \
 	https://addons.mozilla.org/firefox/downloads/latest/1password-x-password-manager/latest.xpi
 chmod 0644 "${FIREFOX_EXT_DIR}"/*.xpi
+
+# Clear the temporary DNS pin bootstrap-guest-agent set on the vanilla guest.
+# It was there only so the first Homebrew curl could resolve names; leaving it
+# baked into the sealed image would override any DNS the VPN client tries to
+# apply at runtime.
+sudo /usr/sbin/networksetup -setdnsservers Ethernet "Empty"

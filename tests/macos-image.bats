@@ -119,7 +119,7 @@ setup() {
 	[ "${status}" -ne 0 ]
 	grep -Fq 'Homebrew/install/HEAD/install.sh' "${INSTALL_SCRIPT}"
 	grep -Fq 'brew install openai/tools/tart-guest-agent' "${INSTALL_SCRIPT}"
-	grep -Fq 'networksetup -setdnsservers Ethernet 1.1.1.1 8.8.8.8' "${INSTALL_SCRIPT}"
+	grep -Fq 'networksetup -setdnsservers Ethernet "Empty"' "${INSTALL_SCRIPT}"
 }
 
 @test "macOS provisioning uses Tart guest execution instead of host networking" {
@@ -131,7 +131,7 @@ setup() {
 @test "macOS provisioning passes the host timezone to configure-apps" {
 	grep -Fq 'readlink /etc/localtime' "${REPO_ROOT}/macos/scripts/provision-vm"
 	grep -Fq 'VM_VPN_TIMEZONE' "${REPO_ROOT}/macos/scripts/provision-vm"
-	grep -Fq 'bash -s -- "$host_timezone"' "${REPO_ROOT}/macos/scripts/provision-vm"
+	grep -Fq 'bash "$remote_path" "$host_timezone"' "${REPO_ROOT}/macos/scripts/provision-vm"
 	grep -Fq 'systemsetup -settimezone' "${CONFIGURE_SCRIPT}"
 	grep -Fq 'GUEST_TIMEZONE="${1:-UTC}"' "${CONFIGURE_SCRIPT}"
 	grep -Fq 'com.apple.timezone.auto Active -bool false' "${CONFIGURE_SCRIPT}"
