@@ -2,8 +2,6 @@
 
 set -euo pipefail
 
-sudo /usr/sbin/networksetup -setdnsservers Ethernet 1.1.1.1 8.8.8.8
-
 if ! command -v /usr/bin/curl >/dev/null 2>&1; then
 	printf 'install-apps: curl is required\n' >&2
 	exit 1
