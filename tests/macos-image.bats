@@ -119,7 +119,6 @@ setup() {
 	[ "${status}" -ne 0 ]
 	grep -Fq 'Homebrew/install/HEAD/install.sh' "${INSTALL_SCRIPT}"
 	grep -Fq 'brew install openai/tools/tart-guest-agent' "${INSTALL_SCRIPT}"
-	grep -Fq 'networksetup -setdnsservers Ethernet "Empty"' "${INSTALL_SCRIPT}"
 }
 
 @test "macOS provisioning uses Tart guest execution instead of host networking" {

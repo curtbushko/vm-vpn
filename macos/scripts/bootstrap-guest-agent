@@ -41,6 +41,13 @@ for attempt in {1..120}; do
 	sleep 2
 done
 
+# Tart's vmnet hands out 192.168.64.1 as the DHCP DNS server, but that
+# address does not answer DNS queries on macOS hosts, so the guest has no
+# working resolver out of the box. Pin public resolvers on Ethernet once
+# and leave them in place: they are needed now so the guest agent install
+# can curl its tarball, and they remain the runtime default so Firefox and
+# other apps resolve non-".openvpn" names (the /etc/resolver/openvpn scope
+# configure-apps installs later handles private lookups over the VPN).
 sshpass -e /usr/bin/ssh "${SSH_OPTIONS[@]}" \
 	"admin@${guest_ip}" \
 	/usr/bin/sudo /usr/sbin/networksetup -setdnsservers Ethernet 1.1.1.1 8.8.8.8
