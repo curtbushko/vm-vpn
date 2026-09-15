@@ -42,6 +42,13 @@ EOF
 sudo chmod 0644 /etc/resolver/openvpn
 sudo /usr/sbin/networksetup -setsearchdomains Ethernet openvpn
 
+# Tart's vmnet hands out 192.168.64.1 as the DHCP DNS server but that address
+# does not answer DNS queries on macOS hosts, so the guest has no working
+# default resolver out of the box. Pin public resolvers on Ethernet so
+# non-".openvpn" names (e.g. google.com, addons.mozilla.org) resolve; the
+# /etc/resolver/openvpn scope above keeps private lookups on the VPC resolver.
+sudo /usr/sbin/networksetup -setdnsservers Ethernet 1.1.1.1 8.8.8.8
+
 readonly FIREFOX_POLICY_DIR="/Applications/Firefox.app/Contents/Resources/distribution"
 readonly FIREFOX_POLICY_FILE="${FIREFOX_POLICY_DIR}/policies.json"
 readonly LAUNCH_AGENT="${HOME}/Library/LaunchAgents/com.vm-vpn.bootstrap.plist"
