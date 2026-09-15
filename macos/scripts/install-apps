@@ -45,6 +45,7 @@ brew install openai/tools/tart-guest-agent
 # usable DNS until the VPN pushes its own resolvers). configure-apps writes a
 # policies.json that references these local paths via file:// install_url.
 readonly FIREFOX_EXT_DIR="/Applications/Firefox.app/Contents/Resources/distribution/extensions"
+printf 'install-apps: baking Firefox extensions into %s\n' "$FIREFOX_EXT_DIR"
 sudo /bin/mkdir -p "$FIREFOX_EXT_DIR"
 sudo /usr/sbin/chown "$(id -u):$(id -g)" "$FIREFOX_EXT_DIR"
 /usr/bin/curl -fsSL \
@@ -54,3 +55,4 @@ sudo /usr/sbin/chown "$(id -u):$(id -g)" "$FIREFOX_EXT_DIR"
 	-o "${FIREFOX_EXT_DIR}/{d634138d-c276-4fc8-924b-40a0ea21d284}.xpi" \
 	https://addons.mozilla.org/firefox/downloads/latest/1password-x-password-manager/latest.xpi
 chmod 0644 "${FIREFOX_EXT_DIR}"/*.xpi
+ls -la "$FIREFOX_EXT_DIR"
